@@ -31,6 +31,10 @@
 
 \usepackage{amsmath}
 
+\usepackage{minted} 			% Code listing with reasonable good highlighting
+\usepackage[no-math]{fontspec}
+\setmonofont[Scale=MatchLowercase]{Apple Symbols} % Unicode mono font
+
 
 \begin{document}
 
@@ -56,7 +60,7 @@
 \titlebanner{banner above paper title}        % These are ignored unless
 \preprintfooter{short description of paper}   % 'preprint' option specified.
 
-\title{Title Text}
+\title{Generic diff3 for algebraic datatypes}
 \subtitle{Subtitle Text, if any}
 
 \authorinfo{Marco Vassena}
@@ -69,7 +73,7 @@
 \maketitle
 
 \begin{abstract}
-This is the text of the abstract.
+
 \end{abstract}
 
 \category{CR-number}{subcategory}{third-level}
@@ -84,180 +88,140 @@ keyword1, keyword2
 
 \section{Introduction}
 
-The text of the paper begins here.
-
-Lots of text.
-
-More text.
-
-Lots of text.
-
-More text.
-
-
-Lots of text.
-
-More text.
-
-Lots of text.
-
-More text.
-
-
-Lots of text.
-
-More text.
-
-Lots of text.
-
-More text.
-
-Lots of text.
-
-More text.
-
-Lots of text.
-
-More text.
-
-Lots of text.
-
-More text.
-
-Lots of text.
-
-More text.
-
-Lots of text.
-
-More text.
-
-Lots of text.
-
-More text.
-
-Lots of text.
-
-More text.
-
-Lots of text.
-
-More text.
-
-
-Lots of text.
-
-More text.
-
-Lots of text.
-
-More text.
-
-
-Lots of text.
-
-More text.
-
-Lots of text.
-
-More text.
-
-Lots of text.
-
-More text.
-
-Lots of text.
-
-More text.
-
-Lots of text.
-
-More text.
-
-Lots of text.
-
-More text.
-
-Lots of text.
-
-More text.
-
-Lots of text.
-
-More text.
-
-
-Lots of text.
-
-More text.
-
-Lots of text.
-
-More text.
-
-
-
-
-Lots of text.
-
-More text.
-
-Lots of text.
-
-More text.
-
-Lots of text.
-
-
-Lots of text.
-
-More text.
-
-Lots of text.
-
-More text.
-
-Lots of text.
-
-More text.
-
-Lots of text.
-
-More text.
-
-Lots of text.
-
-More text.
-
-Lots of text.
-
-More text.
-
-Lots of text.
-
-More text.
-
-Lots of text.
-
-More text.
-
-Lots of text.
-
-More text.
-
-Lots of text.
-
-More text.
-
-Lots of text.
-
-More text.
-
-Lots of text.
-
-More text.
-
-Lots of text.
+\section{Universe}
+In order to implement data type generic algorithms, we need a generic representation of algebraic data types.
+The universe used in this paper consists of typed heterogeneous rose trees,
+a combination of mutually recursive heterogeneous lists and trees
+whose nodes corresponds to data type constructors and their subtrees
+to their fields.
+\begin{minted}{agda}
+  data HTree : Set -> Set where
+    Node : F as a -> HList as -> HTree a
+
+  data HList : List Set -> Set where
+    [] : HList []
+   _∷_ : HTree a -> HList as -> HList (a ∷ as)
+\end{minted}
+	The type \texttt{F as a} denotes the constructor of an algebraic data
+	type of type \texttt{a} that takes arguments of types determined by the list 
+	\texttt{as}. This representation is type-safe because the constructor
+	\texttt{Node} requires the same types \texttt{as} in the fields types and in 
+	the list of subtrees, hence denoting a 	well-typed application of a 
+	constructor to its arguments.
+	Its definition is unimportant for the moment, therefore we will leave it
+	abstract using a postulate. Furthermore a basic comparison
+	function is assumed.
+\begin{minted}{agda}
+  postulate F : List Set -> Set -> Set 
+  postulate _=?=_ : (α : F as a) (β : F bs b) -> Dec (α ≡ β)
+\end{minted}	
+	In section \ref{Haskell} we show how it is possible to implement these 
+	features in a strongly typed functional language like Haskell.
+	
+	In the following we will use two auxiliary functions to append and split 
+	heterogeneous lists:
+\begin{minted}{agda}
+_+++_ : HList as -> HList bs -> HList (as ++ bs)
+split : ∀ {{as bs}} -> HList (as ++ bs) -> HList as × HList bs
+\end{minted}
+	
+\section{Generic diff}
+	The \texttt{diff} algorithm used as a subroutine in \texttt{diff3} is a
+	generalization of that of Lempsink et al. \cite{Lemp09}, therefore
+	we only briefly cover the aspects relevant for the description of
+	the \texttt{diff3} algorithm.
+	The algorithm takes two heterogeneous lists as arguments and
+	outputs an edit scripts that details the differences between them,
+	specifically with a list of edit operations that progressively 	
+	transform one into the other.
+
+	\subsection{Edit Operations}
+	Single edits are defined over values, which denote either the presence or 
+	absence of nodes. 
+\begin{minted}{agda}
+data Val : List Set -> List Set -> Set where
+  ⊥ : Val [] []
+  ⟨_⟩ : F as a -> Val as [ a ] 
+\end{minted}
+	Values are indexed by two lists that are used to stack edits in a type 
+	safe manner and	that contain respectively the types of the fields of a node 
+	and its resulting type.
+	Since empty values do not store any node their lists are both empty.
+
+	The set of edit operations considered includes a no-operation, node 
+	deletion, insertion and update.
+\begin{minted}{agda}
+data _~>_ : Val as bs -> Val cs ds -> Set where
+  Nop : ⊥ ~> ⊥
+  Del : (α : F as a) -> ⟨ α ⟩ ~> ⊥
+  Ins : (α : F as a) -> ⊥ ~> ⟨ α ⟩
+  Upd : (α : F as a) (β : F bs a) -> ⟨ α ⟩ ~> ⟨ β ⟩
+\end{minted}
+	Edits are indexed by two values, called respectively 
+	\emph{source} and \emph{target} values. The \texttt{Nop} edit is 
+	a no-operation that is used exclusively to \emph{align} edit scripts,
+	therefore it maps the empty value into itself.
+	The edit \texttt{Del α} deletes the node \texttt{α} from the source object, 
+	thus it maps it into \texttt{⊥}. Conversely the edit \texttt{Ins α} 
+	inserts the node \texttt{α} in the target object and therefore has source 
+	\texttt{⊥}.
+	Lastly \texttt{Upd α β} denotes the update of the source node \texttt{α}
+	to the target node \texttt{β}, which concretely represents a 
+	constructor change. 
+	Note that there is not a distinct copy edit, which is instead encoded as a 
+	special	update, in which source and target nodes are the same.
+	Edits whose source and target values are identical are 
+	called \emph{identity} edits. Copies and no-operations fall into this
+	category.
+	
+	\subsection{Edit Script}
+	An edit script collects a finite number of edit operations, 
+	while preserving type-safety. 
+\begin{minted}{agda}
+data ES : List Set -> List Set -> Set where
+  [] : ES [] []
+  _::_ : {v : Val as bs} {w : Val cs ds} -> v ~> w -> 
+          ES (as ++ xs) (cs ++ ys) -> ES (bs ++ xs) (ds ++ ys)
+\end{minted}	
+	An edit script of type \texttt{ES xs ys} transforms
+	a \emph{source} object of type \texttt{HList xs} into
+	a \emph{target} object of type \texttt{HList ys}. 
+	The following function retrieves the source object from an edit script:			
+\begin{minted}{agda}
+⟪_⟫ : ES as bs -> HList as
+⟪ [] ⟫ = []
+⟪ Nop ∷ e ⟫ = ⟪ e ⟫
+⟪ Del α ∷ e ⟫ with hsplit ⟪ e ⟫
+... | hs₁ , hs₂ = Node α hs₁ ∷ hs₂
+⟪ Ins α ∷ e ⟫ = ⟪ e ⟫
+⟪ Upd α β ∷ e ⟫ with hsplit ⟪ e ⟫
+... | ds₁ , ds₂ = Node α hs₁ ∷ hs₂
+\end{minted}
+	No-operations and insert edits do not affect the source object,
+	because their source vale is empty, therefore in these cases the source 
+	function is simply called recursively.
+	On the other hand delete and update edits alter a node of the
+	source object by either removing it or changing it.
+	In these two cases such node is output as part of the source object.
+	The source function is called recursively on the rest of the edit 
+	script producing a list, whose prefix correspond to the subtrees of the
+	top node. Using the function \texttt{hsplit} the list is decomposed 
+	accordingly in two parts, which are then assembled appropriately.
+	
+	Dually we define a function that retrieves the target object.
+	Since it is analogous to the previous we give only its signature:
+	
+\begin{minted}{agda}
+⟦_⟧ : ES as bs -> DList bs
+\end{minted}
+
+	\subsection{Diff algorithm}
+
+\section{Generic diff3}
+
+\section{Properties}
+
+\section{Discussion and Related Work}
 
 \appendix
 \section{Appendix Title}
