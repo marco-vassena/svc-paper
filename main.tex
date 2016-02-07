@@ -46,6 +46,9 @@
 \usepackage{newunicodechar}                   
 \newunicodechar{ᶜ}{$^c$}
 \newunicodechar{ₑ}{$_e$}
+\newunicodechar{ₑ}{$_e$}
+\newunicodechar{ᵗ}{$^t$}
+\newunicodechar{ˢ}{$^s$}
 
 
 \begin{document}
@@ -571,8 +574,8 @@ _⊔₃_  _ _ {{p}} = merge₃ p
 
         In order to reason about merging we encode the specifications of
         the merge operator in the following data type:
-\todo{This was called Diff₃ in the thesis, but I think Merge₃ is more appropriate
-because it is a reification of the function merge₃}
+\todo{This was called Diff3 in the thesis, but I think Merge3 is more appropriate
+because it is a reification of the function merge3}
 \begin{minted}{agda}
 data Merge₃ : ES xs ys → Es xs zs → ES₃ xs → Set where
  nil : Merge₃ [] [] []
@@ -671,7 +674,7 @@ data Merged₃ : ES xs ys → ES xs zs → ES xs ws → Set where
         The following lemma ties the connection between \texttt{Merge₃} and 
         \texttt{Merged₃}:
 \begin{minted}{agda}
-         Diff₃ e₁ e₂ e₃  ,  e₃ ⇓ ws   ⇒   Merged₃ e₁ e₂ ⌜ e₃ ⌝
+         Merge₃ e₁ e₂ e₃  ,  e₃ ⇓ ws   ⇒   Merged₃ e₁ e₂ ⌜ e₃ ⌝
 \end{minted}
 
 \section{Properties}
@@ -749,45 +752,238 @@ data _⊢ₑ_~>_  (e : ES xs ys) : Val as bs → Val cs ds → Set where
     Diff x y e   ,   α ∈ y   ⇒   ∃ v . e ⊢ₑ v ~> ⟨ α ⟩
 \end{minted}
  
-        \paragraph{Edit Origin}
-	The safety properties just discussed extend naturally to edits in the 
-	\texttt{Diff₃} data type.
-        The first one states that any edit found in the merged script,
-	comes from either of the input scripts.
+    \paragraph{Edit Origin}
+    The safety properties just discussed extend naturally to edits in the 
+    \texttt{Merged₃} data type.
+    The first one states that any edit found in the merged script,
+    comes from either of the input scripts.
 \begin{minted}{agda}
-        f ∈ e₃   ,   Diff₃ e₁ e₂ e₃    ⇒    f ∈ₑ e₁   ∨   f ∈ₑ e₂
+        f ∈ e₃   ,   Merged₃ e₁ e₂ e₃    ⇒    f ∈ₑ e₁   ∨   f ∈ₑ e₂
 \end{minted}
     
-	\paragraph{Persistence}
-	The converse property asserts that an edit present in one of the input
-	edit scripts will be found in the merged edit script, given that it does
-	perform a change and that the output script does not contain conflicts.
-	The first hypothesis is needed because identity edits can be silently 
-	ignored in the merge semantics given by \texttt{f ⊔ g ↧ h} (\texttt{Id₁}, 
-        \texttt{Id₂}).
-	On the other hand the second prerequisite is essential, because 
-	our algorithm is \emph{persistent}, i.e.\ it refuses to back out changes 
-        made by incompatible edits, but triggers an appropriate conflict instead.
+    \paragraph{Persistence}
+    The converse property asserts that an edit present in one of the input
+    edit scripts will be found in the merged edit script, given that it does
+    perform a change and that the output script does not contain conflicts.
+    The first hypothesis is needed because identity edits can be silently 
+    ignored in the merge semantics given by \texttt{f ⊔ g ↧ h} (\texttt{Id₁}, 
+    \texttt{Id₂}).
+    On the other hand the second prerequisite is essential, because 
+    our algorithm is \emph{persistent}, i.e.\ it refuses to back out changes 
+    made by incompatible edits, but triggers an appropriate conflict instead.
 
-	Firstly an edit does perform a change if it is not an identity edit, or, in 
-	other words if the source and the target values are different.
+    Firstly an edit does perform a change if it is not an identity edit, or, in 
+    other words if the source and the target values are different.
 				
 \begin{minted}{agda}
     f : u ~> v   ∧   u ≠ v   ∧   f ∈ₑ e₁
              Merge₃ e₁ e₂ e₃                   ⇒        f ∈ₑ e₃
              NoConflict e₃ 
 \end{minted}
-
-	The same property holds for edits that belong to the second edit, given
-	that the \texttt{Diff₃} relation is symmetric in absence of conflicts.	
-	Note that this is not the case, when \texttt{e₃} does contain some conflicts,
-	because the \texttt{Conflict} data type is asymmetric.
+    \paragraph{Proof Sketch}
+    The proof is by induction on \texttt{Merge₃ e₁ e₂ e₃} and \texttt{f ∈ₑ e₁}.
+    In the base case the edit \texttt{f} is merged with some other edit \texttt{g},
+    \texttt{f ⊔ g ↧ h}. Note that \texttt{f ⊔ g ↥ c} cannot occur because of
+    the \texttt{NoConflict e₃} hypothesis. By case analysis on \texttt{f ⊔ g ↧ h},
+    \texttt{h} may be either \texttt{f} (\texttt{Id₂} or \texttt{Idem}), or 
+    \texttt{g} (\texttt{Id₁}. However this case is contradictory because we
+    assumed \texttt{f} not to be an identity edit.
+    
+    The same property holds for edits that belong to the second edit, given
+    that the \texttt{Diff₃} relation is symmetric in absence of conflicts.	
+    Note that this is not the case, when \texttt{e₃} does contain some conflicts,
+    because the \texttt{Conflict} data type is asymmetric.
+    The \texttt{NoConflict e₃} hypothesis is obviously redundant when
+    considering successful merges.
+    
 		
-
-
     \subsection{Maximality}
 
     \subsection{Structural  Invariants}
+    An edit script transforms lists of trees, traversing and processing 
+    their nodes in depth-first order.
+    It represents a mapping from the source to the target, in which 
+    nodes of the source are embedded in nodes of the target.
+    A central property ensured by edit scripts is that the 
+    embedding preserves the depth-first ordering of source and target nodes.
+    However nodes are not only mapped (updated) from the source to the 
+    target, but they may also be inserted and removed. 
+    Therefore the embedding-preserving property has to be adjusted to
+    take these transformations into account.
+
+    Firstly we formally define depth-first ordering on trees, secondly
+    we give a similar relation for edits contained in edit scripts, 
+    lastly, by showing how the former implies the latter we deduce
+    the structural invariant.
+    
+
+    \paragraph{Depth-First Order}
+    A pre-order depth-first traversal consists of firstly visiting the current node 
+    and then traversing recursively its subtrees from the leftmost to the rightmost.
+    The traversal induces an ordering on the nodes, so that those that
+    are visited sooner come before those that are processed later.
+    Since the edit scripts manipulate list of trees, instead of single trees,
+    also the definitions about ordering relations will be adjusted accordingly.
+
+    The type \texttt{hs ⊢ α ⊏ β} denotes that, in the list of trees \texttt{hs}, 
+    the node \texttt{α} comes before the node \texttt{β}, according to the
+    depth first traversal.
+
+\begin{minted}{agda}
+data _⊢_⊏_ : Hist xs → F as a → F bs b → Set where
+  here : β ∈ (hs₁ +++ hs₂) → Node α hs₁ ∷ hs₂ ⊢ α ⊏ β
+  there : hs₁ +++ hs₂ ⊢ α ⊏ β → Node γ hs₁ ∷ hs₂ ⊢ α ⊏ β
+\end{minted}
+
+    The list is used as a stack of trees containing the nodes to be visited.
+    In the base constructor \texttt{here}, the node \texttt{α} is pushed on the 
+    stack and thus comes before any node \texttt{β}, that belongs to the
+    stack of nodes yet to be processed.
+    The recursive constructor \texttt{there} adds a node \texttt{γ} to a list of 
+    trees, in which \texttt{α} already comes before \texttt{β}.
+    Note that the top elements of the stack (\texttt{hs₁}) are popped 
+    and combined to construct a new tree, rooted respectively 
+    in \texttt{α} and \texttt{γ}, which is then pushed on the stack. 
+    In this way it is possible to extend the stack node by node, 
+    retaining type-safety. 
+
+    \paragraph{Edits Order}
+    The next data type defines a similar relation for edit scripts.
+    The type \texttt{e ⊢ₑ f ⊏ g} denotes that in the script \texttt{e}, the edit
+    \texttt{f} precedes the edit \texttt{g}.
+
+\begin{minted}{agda}
+data _⊢ₑ_⊏_ : ES xs ys → u ~> v → w ~> z → Set where
+  here : (f : w ~> z) → g ∈ₑ e → f ∷ e ⊢ₑ f ⊏ g 
+  there : (h : s ~> t) → e ⊢ₑ f ⊏ g → h ∷ e ⊢ₑ f ⊏ g 
+\end{minted}
+
+    The following basic properties ensure that the order of two edits 
+    is reflected by the order of their source nodes in the \emph{source} object.
+\begin{minted}{agda}
+        f : ⟨ α ⟩ ~> v 
+        g : ⟨ β ⟩ ~> w       ⇒       ⟪ e ⟫ ⊢ α ⊏ β
+        e ⊢ₑ f ⊏ g 
+\end{minted}
+    Similarly the order of the target nodes is preserved in the \emph{target} 
+    object.    
+
+\begin{minted}{agda}
+        f : v ~> ⟨ α ⟩
+        g : w ~> ⟨ β ⟩       ⇒      ⟦ e ⟧ ⊢ α ⊏ β
+        e ⊢ₑ f ⊏ g
+\end{minted}
+
+    Conversely we show that if in the \emph{source} (\emph{target}) 
+    object one node precedes another, then the corresponding edits in their diff 
+    will share the same order.
+\begin{minted}{agda}
+Diff x y e  ,  x ⊢ α ⊏ β    ⇒    ∃  f : ⟨ α ⟩ ~> u , g : ⟨ β ⟩ ~> v . 
+                                                e ⊢ₑ f ⊏ g
+
+Diff x y e  ,  y ⊢ α ⊏ β    ⇒    ∃  f : u ~> ⟨ α ⟩ , g : v ~> ⟨ β ⟩ . 
+                                                e ⊢ₑ f ⊏ g
+\end{minted}
+
+    \paragraph{Order-preserving Embedding}
+    We now have all the lemmas to prove the main theorem, 
+    which states that the edit script data type preserves the depth-first order of
+    the source and target objects.
+    The theorem is split in two parts, the first one considers 
+    the ordering of the source object, and the second of the target.
+    The first one states that, given an edit script \texttt{e}, 
+    if in its source object a node \texttt{α} comes before
+    some node \texttt{β}, then one of the following holds:
+    \begin{itemize}
+    \item \texttt{α} is deleted in \texttt{e};
+    \item \texttt{β} is deleted in \texttt{e};
+    \item There are two nodes \texttt{γ} and \texttt{φ}, such that the node 
+    \texttt{α} is 	mapped to \texttt{γ}, the node \texttt{β} is mapped to 
+    \texttt{φ} in \texttt{e} and 
+    in the target	object, the node \texttt{γ} comes before \texttt{φ}
+    \end{itemize}
+
+    The theorem can be formally stated as follows:
+\begin{minted}{agda}
+        Diff x y e   ,   x ⊢ α ⊏ β      ⇒      e ↦ α ⊏ β
+\end{minted}
+
+    Where the type \texttt{e ↦ α ⊏ β} denotes that \texttt{e} is a (source) 
+    order-preserving embedding:
+\begin{minted}{agda}
+data _↦_⊏_ (e : ES xs ys) (α : F as a) (β : F bs b) : Set where
+  Del₁ : e ⊢ₑ ⟨ α ⟩ ~> ⊥ → e ↦ α ⊏ β
+  Del₂ : e ⊢ₑ ⟨ β ⟩ ~> ⊥ → e ↦ α ⊏ β
+  Map₂ : e ⊢ₑ ⟨ α ⟩ ~> ⟨ γ ⟩ → e ⊢ₑ ⟨ β ⟩ ~> ⟨ φ ⟩ → 
+         ⟦ e ⟧ ⊢ γ ⊏ φ → e ↦ α ⊏ β
+\end{minted}
+
+    \paragraph{Proof Sketch} By the edit order properties discussed in the previous
+    paragraph we know that \texttt{e} contains two edits \texttt{f} and \texttt{g}
+    that map respectively \texttt{α} to some value \texttt{u} and \texttt{β} to
+    \texttt{v}, such that \texttt{e ⊢ₑ f ⊏ g}. 
+    By inspection either \texttt{u} is empty (\texttt{⊥}), or \texttt{v}
+    is empty, or they both wrap two nodes \texttt{γ} and \texttt{Φ}.
+    In the first two cases it follows that either \texttt{f} or \texttt{g} is
+    a delete and the theorem holds (\texttt{Del₁} and \texttt{Del₂}).
+    In the last case \texttt{f} and \texttt{g} are both updates then 
+    \texttt{e ⊢ₑ ⟨ α ⟩ ~> ⟨ γ ⟩} and \texttt{e ⊢ₑ ⟨ β ⟩ ~> ⟨ Φ ⟩}.
+    Since \texttt{e ⊢ₑ f ⊏ g} we can apply the first edit-order property from
+    which follows that \texttt{⟦ e ⟧ ⊢ γ ⊏ Φ} and the theorem holds (\texttt{Map₂}).
+
+    The second theorem is symmetrical to the first and thus we will 
+    briefly outline it.
+    It states that, given an edit script \texttt{e}, if in its
+    target object a node \texttt{α} comes before
+    some node \texttt{β}, then one of the following holds:
+    \begin{itemize}
+            \item \texttt{α} is inserted in \texttt{e};
+            \item \texttt{β} is inserted in \texttt{e};
+            \item There are two nodes \texttt{γ} and \texttt{φ}, such that the node 
+            \texttt{γ} is mapped to \texttt{α}, the node \texttt{φ} is mapped to 
+            \texttt{β} in 	\texttt{e} and in the source object, 
+            the node \texttt{γ} comes before \texttt{φ}
+    \end{itemize}
+
+    More formally:
+\begin{minted}{agda}
+        Diff x y e   ,   y ⊢ α ⊏ β      ⇒      e ↤ α ⊏ β
+\end{minted}
+
+    The type \texttt{e ↤ α ⊏ β} denotes that \texttt{e} is a (target) 
+    order-preserving embedding:
+
+\begin{minted}{agda}
+data _↤_⊏_ (e : ES xs ys) (α : F as a) (β : F bs b) : Set where
+  Ins₁ : e ⊢ₑ ⊥ ~> ⟨ α ⟩ → e ↤ α ⊏ β
+  Ins₂ : e ⊢ₑ ⊥ ~> ⟨ β ⟩ → e ↤ α ⊏ β
+  Map₂ : e ⊢ₑ ⟨ γ ⟩ ~> ⟨ α ⟩ → e ⊢ₑ ⟨ φ ⟩ ~> ⟨ β ⟩ → 
+       ⟪ e ⟫ ⊢ γ ⊏ φ → e ↤ α ⊏ β
+\end{minted}
+
+    The proof is symmetrical to the first one and will not be discussed any further.
+
+    \paragraph{Merged$_3$}
+    Also successful merges retain the order-preserving property, i.e.\
+    the order of the edits in the input scripts is preserved.
+    The property holds intuitively because the merge algorithm
+    does not rearrange the input edits, 
+    but rather merge them pointwise, retaining the original order in the merged 
+    script.
+    Nevertheless identity edits might be dropped in the merged script in favour,
+    according to the semantics of \texttt{f ⊔ g ↧ h}, hence
+    the theorem applies only to \emph{non-identity} edits.
+    Note also that successful merges do not trigger any conflict, which
+    would also break this property.
+
+\begin{minted}{agda}
+    Merged e₁ e₂ e₃
+    e₁ ⊢ₑ f ⊏ g                  ⇒              e₃ ⊢ₑ f ⊏ g
+    f : u ~> v  , g : w ~> z  
+    u ≠ v , w ≠ z
+\end{minted}
+    Since \texttt{Merged₃ e₁ e₂ e₃} is a symmetric relation, the property holds 
+    for edits of the second script. 
 
 \section{Discussion and Related Work}
 
