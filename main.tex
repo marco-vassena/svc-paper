@@ -45,7 +45,7 @@
 % Definitions for unicode characters not included
 \usepackage{newunicodechar}                   
 \newunicodechar{ᶜ}{$^c$}
-
+\newunicodechar{ₑ}{$_e$}
 
 
 \begin{document}
@@ -663,9 +663,9 @@ diff₃ y x z | WA _ _ p = merge₃ p
 
 \todo{Better name? I don't have good alternatives SMerge₃ , WT-Merge₃}
 \begin{minted}{agda}
-data Merged₃ : ES xs ys -> ES xs zs -> ES xs ws -> Set where  
+data Merged₃ : ES xs ys → ES xs zs → ES xs ws → Set where  
   nil : Merged₃ [] [] []
-  cons : f ⊔ g ↧ h -> Merged₃ e₁ e₂ e₃ -> Merged₃ (f ∷ e₁) (g ∷ e₂) (h ∷ e₃)
+  cons : f ⊔ g ↧ h → Merged₃ e₁ e₂ e₃ → Merged₃ (f ∷ e₁) (g ∷ e₂) (h ∷ e₃)
 \end{minted}
         Note that the third index is a well-typed edit script.
         The following lemma ties the connection between \texttt{Merge₃} and 
@@ -683,6 +683,107 @@ that have been formally studied using the model presented in this paper.
     minimal conditions that will trigger a conflict.
 
     \subsection{Safety}
+    The safety properties act as a sanity check and ensure that the \texttt{diff} 
+    and consequently the  \texttt{diff3} algorithm will not make up nor forget any 
+    piece of data.
+
+    Firstly we give some auxiliary definitions that will be used to state and prove
+    this properties.
+
+    \paragraph{Membership}
+    The type \texttt{α ∈ hs} denotes that the node \texttt{α} is present
+    in the list of trees \texttt{hs}.
+
+\begin{minted}{agda}
+data _∈_ : F xs a → HList ys → Set where
+  here : (α : F as a) → α ∈ Node α hs₁ ∷ hs₂
+  there : α ∈ hs₁ +++ hs₂ → α ∈ Node β hs₁ ∷ hs₂
+\end{minted}
+
+    A similar data type denotes the presence of an edit in a script.
+
+\begin{minted}{agda}
+data _∈ₑ_ : v ~> w → ES xs ys → Set where
+  here : (f : v ~> w) → f ∈ₑ f ∷ e
+  there : f ∈ₑ e → f ∈ₑ g ∷ e
+\end{minted}
+    Lastly the judgment \texttt{e ⊢ₑ u \textasciitilde> v} denotes that
+    the script \texttt{e} contains some edit of type \texttt{u \textasciitilde> v}.
+\begin{minted}{agda}
+data _⊢ₑ_~>_  (e : ES xs ys) : Val as bs → Val cs ds → Set where
+  Nop : Nop ∈ₑ e → e ⊢ₑ ⊥ ~> ⊥
+  Del : Del α ∈ₑ e → e ⊢ₑ ⟨ α ⟩ ~> ⊥
+  Ins : Ins α ∈ₑ e → e ⊢ₑ ⊥ ~> ⟨ α ⟩
+  Upd : Upd α β ∈ₑ e → e ⊢ₑ ⟨ α ⟩ ~> ⟨ β ⟩ 
+\end{minted}
+    Two fundamental properties of the edit script data type guarantee that
+    the source node of an edit will be part of the \emph{source} of the script and
+    similarly the target node of an edit will show up in its \emph{target}.
+% I think I will skip this one and directly state the more interesting one
+% \begin{minted}{agda}
+%    ∀   f : ⟨ α ⟩ ~> v  .  f ∈ₑ e   ⇒   α ∈ ⟪ e ⟫
+%    ∀   f : v ~> ⟨ α ⟩  .  f ∈ₑ e   ⇒   α ∈ ⟦ e ⟧
+% \end{minted}
+\begin{minted}{agda}
+    e ⊢ₑ ⟨ α ⟩ ~> v   ⇒   α ∈ ⟪ e ⟫
+    e ⊢ₑ v ~> ⟨ α ⟩   ⇒   α ∈ ⟦ e ⟧
+\end{minted}
+
+    \paragraph{Data Origin}
+
+    It immediately follows from this property and the \texttt{Diff} specifications 
+    that any node mentioned in an edit script comes from either the \emph{source}
+    or the \emph{target} object.
+\begin{minted}{agda}
+    e ⊢ₑ ⟨ α ⟩ ~> v   ,   Diff x y e   ⇒   α ∈ x 
+    e ⊢ₑ v ~> ⟨ α ⟩   ,   Diff x y e   ⇒   α ∈ y 
+\end{minted}
+
+    \paragraph{Data Retention}
+    Conversely we show that every node present in either the \emph{source} or
+    \emph{target} object is not ignored in the diff, but it is 
+    actually processed by some edit in the script.
+
+\begin{minted}{agda}
+    Diff x y e   ,   α ∈ x   ⇒   ∃ v . e ⊢ₑ ⟨ α ⟩ ~> v
+    Diff x y e   ,   α ∈ y   ⇒   ∃ v . e ⊢ₑ v ~> ⟨ α ⟩
+\end{minted}
+ 
+        \paragraph{Edit Origin}
+	The safety properties just discussed extend naturally to edits in the 
+	\texttt{Diff₃} data type.
+        The first one states that any edit found in the merged script,
+	comes from either of the input scripts.
+\begin{minted}{agda}
+        f ∈ e₃   ,   Diff₃ e₁ e₂ e₃    ⇒    f ∈ₑ e₁   ∨   f ∈ₑ e₂
+\end{minted}
+    
+	\paragraph{Persistence}
+	The converse property asserts that an edit present in one of the input
+	edit scripts will be found in the merged edit script, given that it does
+	perform a change and that the output script does not contain conflicts.
+	The first hypothesis is needed because identity edits can be silently 
+	ignored in the merge semantics given by \texttt{f ⊔ g ↧ h} (\texttt{Id₁}, 
+        \texttt{Id₂}).
+	On the other hand the second prerequisite is essential, because 
+	our algorithm is \emph{persistent}, i.e.\ it refuses to back out changes 
+        made by incompatible edits, but triggers an appropriate conflict instead.
+
+	Firstly an edit does perform a change if it is not an identity edit, or, in 
+	other words if the source and the target values are different.
+				
+\begin{minted}{agda}
+    f : u ~> v   ∧   u ≠ v   ∧   f ∈ₑ e₁
+             Merge₃ e₁ e₂ e₃                   ⇒        f ∈ₑ e₃
+             NoConflict e₃ 
+\end{minted}
+
+	The same property holds for edits that belong to the second edit, given
+	that the \texttt{Diff₃} relation is symmetric in absence of conflicts.	
+	Note that this is not the case, when \texttt{e₃} does contain some conflicts,
+	because the \texttt{Conflict} data type is asymmetric.
+		
+
 
     \subsection{Maximality}
 
