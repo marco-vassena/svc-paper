@@ -474,7 +474,8 @@ data _⊔_↥_ : (u ~> v) → (u ~> w) → Conflict u v w → Set where
 _⊔_ : (f : u ~> v) (g : u ~> w) →
         (∃ λ c → f ⊔ g ↥ c) ⊎ (∃ λ h → f ⊔ g ↧ h)
 \end{minted}
-	This operator is outlined in table \ref{table:merge}.			
+	This operator is outlined in table \ref{table:merge}, where we have
+        omitted the obvious inequalities in the conflicts cases.
 
 	\begin{table*}[t]
 	\centering
@@ -492,17 +493,17 @@ _⊔_ : (f : u ~> v) (g : u ~> w) →
 	\\ \hline
 	\texttt{Del α} & \texttt{Del α} & \textcolor{Green}{\texttt{Idem (Del α)}}
 	\\ \hline
-	\texttt{Del α} & \texttt{Upd α β} & \textcolor{Red}{\texttt{Cnf (Del α) (Upd α β) (⟨ α ⟩ ≠ ⊥) (⟨ α ⟩ ≠ ⟨ β ⟩)  (⊥ ≠ ⟨ β ⟩) (DelUpd α β) }}
+	\texttt{Del α} & \texttt{Upd α β} & \textcolor{Red}{\texttt{Cnf (Del α) (Upd α β) (DelUpd α β) }}
 	\\ \hline
-	\texttt{Upd α β} & \texttt{Del α} & \textcolor{Red}{\texttt{Cnf (Upd α β) (Del α) (⟨ α ⟩ ≠ ⟨ β ⟩) (⟨ α ⟩ ≠ ⊥) (⟨ β ⟩ ≠ ⟨ α ⟩) (UpdDel α β)}}
+	\texttt{Upd α β} & \texttt{Del α} & \textcolor{Red}{\texttt{Cnf (Upd α β) (Del α) (UpdDel α β)}}
 	\\ \hline
 	\texttt{Ins α} & \texttt{Ins α} & \textcolor{Green}{\texttt{Idem (Ins α)}} 
 	\\	\hline
-	\texttt{Ins α} & \texttt{Ins β} & \textcolor{Red}{\texttt{Cnf (Ins α) (Ins β) (⊥ ≠ ⟨ α ⟩) (⊥ ≠ ⟨ β ⟩) (⟨ α ⟩ ≠ ⟨ β ⟩) (InsIns α β)}}
+	\texttt{Ins α} & \texttt{Ins β} & \textcolor{Red}{\texttt{Cnf (Ins α) (Ins β) (InsIns α β)}}
 	\\	\hline
 	\texttt{Upd α β} & \texttt{Upd α β} & \textcolor{Green}{\texttt{Idem (Upd α β)}}
 	\\	\hline
-	\texttt{Upd α β} & \texttt{Upd α γ} & \textcolor{Red}{\texttt{Cnf (Upd α β) (Upd α γ) (⟨ α ⟩ ≠ ⟨ β ⟩) ( ⟨ α ⟩ ≠ ⟨ γ ⟩) (⟨ β ⟩ ≠ ⟨ γ ⟩) (UpdUpd α β γ)}}
+	\texttt{Upd α β} & \texttt{Upd α γ} & \textcolor{Red}{\texttt{Cnf (Upd α β) (Upd α γ) (UpdUpd α β γ)}}
 	\\ \hline
 	\end{tabular}
 	
