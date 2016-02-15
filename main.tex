@@ -75,7 +75,7 @@
 \titlebanner{banner above paper title}        % These are ignored unless
 \preprintfooter{short description of paper}   % 'preprint' option specified.
 
-\title{Generic diff3 for algebraic datatypes}
+\title{Generic diff3 for Algebraic Datatypes}
 \subtitle{Subtitle Text, if any}
 
 \authorinfo{Marco Vassena}
@@ -378,6 +378,7 @@ align : Diff x y e₁ → Diff x z e₂ → e₁ ~ e₂
 \end{minted}
 
 	\subsection{Merge Semantics}
+        \label{merge-semantics}
 	Our merge semantics is defined over aligned edits.
 	Two aligned edits contain at most three distinct values: 
 	one common source and two, 	possibly different, targets, which 
@@ -665,6 +666,46 @@ that have been formally studied using the model presented in this paper.
     \subsection{Conflict}  
     In order to reason about complex merge operations we have studied what are the 
     minimal conditions that will trigger a conflict.
+    Two edits are unmergeable if they contain at least two aligned edits that 
+    may not be merged.
+    The type \texttt{e₁ , e₂  ↥ c} denotes that two edit scripts \texttt{e₁} and 
+    \texttt{e₂} will yield the conflict \texttt{c} if merged and precisely
+    captures these circumstances.
+
+\begin{minted}{agda}
+data _,_↥_ : ES xs ys -> ES xs zs -> Conflict u v w -> Set where
+  here :  f ⊔ g ↥ c -> (f ∷ e₁) , (g ∷ e₂) ↥ c
+  there : e₁ , e₂ ↥ c -> (f ∷ e₁) , (g ∷ e₂) ↥ c
+\end{minted}
+
+    In order to show that these are truly the minimal conditions to get a conflict,
+    we define a data type that denotes that a merged edit script contains a 
+    conflict. 
+
+\begin{minted}{agda}
+data _∈ᶜ_ (c : Conflict u v w) : ES₃ xs -> Set₁0 where
+  here : c ∈ᶜ (c ∷ᶜ e)
+  there : c ∈ᶜ e -> c ∈ᶜ f ∷ e
+  thereᶜ : c ∈ᶜ e -> c ∈ᶜ (c' ∷ᶜ e)
+\end{minted}
+
+    The following theorem states the presence of a conflict in a merged
+    edit script can be explained by the condition \texttt{e₁ , e₂ ↥ c}, i.e.\
+    that \texttt{e₁} and \texttt{e₂} contain two conflicting edits.
+
+\begin{minted}{agda}
+    Merge₃ e₁ e₂ e₃    ∧    c ∈ᶜ e₃     ⇒    e₁ , e₂ ↥ c
+\end{minted}
+    The proof follows immediately by induction.
+    Conversely we show that \texttt{e₁ , e₂ ↥ c} implies the presence
+    of a conflict in their merged edit script.
+\begin{minted}{agda}
+    Merge₃ e₁ e₂ e₃    ∧    e₁ , e₂ ↥ c      ⇒    c ∈ᶜ e₃
+\end{minted}
+    The proof also follow from induction. Note that we can discharge the paradoxical
+    base case in which the same edits are merged in \texttt{Merge₃ e₁ e₂ e₃}
+    (\texttt{f ⊔ g ↧ h}) and not in \texttt{e₁ , e₂ ↥ c} (\texttt{f ⊔ g ↥ c}),
+    because these two cases are mutually exclusive.    
 
     \subsection{Safety}
     The safety properties act as a sanity check and ensure that the \texttt{diff} 
@@ -776,9 +817,37 @@ data _⊢ₑ_~>_  (e : ES xs ys) : Val as bs → Val cs ds → Set where
     because the \texttt{Conflict} data type is asymmetric.
     The \texttt{NoConflict e₃} hypothesis is obviously redundant when
     considering successful merges.
-    
-		
+    		
     \subsection{Maximality}
+    A convenient property of our merge algorithm is that it is maximal, i.e.\ a successful 
+    merge run will produce an edit script that contains all the \emph{changes} included
+    by each input script. The type \texttt{Maximal e₁ e₂ e₃} denotes that  
+    script \texttt{e₃} is \emph{maximal} with respect to \texttt{e₁} and \texttt{e₂}.
+	
+\begin{minted}{agda}
+data Maximal : ES xs ys → ES xs zs → ES xs ws → Set where
+ Nil : Maximal [] [] []
+ Idem : Maximal e₁ e₂ e₃ → Maximal (f ∷ e₁) (f ∷ e₂) (f ∷ e₃)
+ Id₁ : (f : v ~> v) (g : v ~> w) → Maximal e₁ e₂ e₃ → 
+         Maximal (f ∷ e₁) (g ∷ e₂) (g ∷ e₃)
+ Id₂ : (f : v ~> w) (g : v ~> v) → Maximal e₁ e₂ e₃ → 
+         Maximal (f ∷ e₁) (g ∷ e₂) (f ∷ e₃)
+\end{minted}
+
+    In the base case \texttt{Nil} all the three scripts
+    are empty and therefore form a (trivial) empty triplet.
+    The \texttt{Idem} constructor adds the same edit to each of three scripts 
+    that form a maximal triplet, correctly retaining this property.
+    The presence of \texttt{Id₁} and \texttt{Id₂} does not break maximality, because
+    they add, respectively to \texttt{e₁} and to \texttt{e₂}, an \emph{identity} edit.
+    It is fine to ignore them because they don't perform any \emph{change}.
+
+    Clearly the maximality triplet definition closely resembles the merging semantics discussed
+    in section \ref{merge-semantics}. We can easily show that the script resulting from
+    successfully merging two edit script is maximal.
+\begin{minted}{agda}
+    Merged e₁ e₂ e₃    ⇒    Maximal e₁ e₂ e₃
+\end{minted}
 
     \subsection{Structural  Invariants}
     An edit script transforms lists of trees, traversing and processing 
