@@ -40,7 +40,12 @@
 \usepackage[dvipsnames]{xcolor}  		% Color package
 \definecolor{dgreen}{rgb}{0.,0.6,0.}    % Deep green
 \usepackage{caption}      
-\usepackage{todonotes}								% todos
+\usepackage{todonotes}	% todos
+
+% Figures with border
+\usepackage{float}
+\floatstyle{boxed} 
+\restylefloat{figure}
 
 % Definitions for unicode characters not included
 \usepackage{newunicodechar}                   
@@ -138,6 +143,8 @@ data Dec (P : Set) : Set where
   yes : P → Dec P
   no  : ¬ P → Dec P
 \end{minted}
+        \todo{This explanation is not actually essential and might be confusing
+              since the same symbol is used for values}
 	Negation of statements such as \texttt{¬ P} are encoded in type theory as
 	a function \texttt{P → ⊥}, where \texttt{⊥} is
 	the constructorless data type, which corresponds to falsity 
@@ -252,7 +259,7 @@ data ES : List Set → List Set → Set where
 \begin{minted}{agda}
 diff : HList as → HList bs → ES as bs
 \end{minted}
-        Nevertheless our formalization abstracts over the concrete diffing algorithm
+        Nevertheless our formalization abstracts over the specific algorithm
         used. Any \texttt{diff} algorithm that satisfy the following specifications
         can be employed in \texttt{diff3}:
 \[ \texttt{e = diff x y} \qquad \Leftrightarrow \qquad \texttt{⟪ e ⟫ ≡ x} \quad \land \quad  \texttt{⟦ e ⟧ ≡ y} \]
@@ -266,7 +273,7 @@ diff : HList as → HList bs → ES as bs
         proof that the edit script \texttt{e} is the result of diffing the lists 
         \texttt{x} and \texttt{y}.
 \begin{minted}{agda}
-data Diff : HList xs → HList ys → ES xs ys → Set₁ where
+data Diff : HList xs → HList ys → ES xs ys → Set where
   End : Diff [] [] []
   Nop : Diff x y e → Diff x y (Nop ∷ e)
   Del : Diff (x₁ +++ x₂) y e → Diff (Node α x₁ ∷ x₂ ) y (Del α ∷ e)
@@ -285,10 +292,10 @@ Diff⇐ : (e : ES xs ys) → Diff ⟪ e ⟫ ⟦ e ⟧ e
 Diff⇒ : Diff x y e → x ≡ ⟪ e ⟫  ×  y ≡ ⟦ e ⟧
 \end{minted}
 
-
+        \todo{Should I expand on the diff algorithm?}
 	In our implementation the \texttt{diff} algorithm employed is a 
         generalization of that proposed by Lempsink et al.\ \cite{Lemp09} and 
-        therefore we will not discuss it any further. 
+        therefore we will not discuss it any further. \
         We only remark that in our model we have proved that it 
 	complies with the \texttt{Diff} specification:
 \begin{minted} {agda}
@@ -332,8 +339,8 @@ data _⋎_ : ES as bs → ES as cs → Set where
   nil : [] ⋎ []
   cons : (f : u ~> v) (g : u ~> w) → e₁ ⋎ e₂ → f ∷ e₁ ⋎ g ∷ e₂ 
 \end{minted}
-	The definition is recursive: two edit scripts are aligned either if they are
-	both empty or they contain two aligned edits and their tails are aligned.
+	The definition is recursive: two edit scripts are aligned if either  
+        they are both empty or their heads and their tails are both aligned.
 	Note that we do not need an auxiliary data type to encode edit 
 	alignment since this property can be expressed directly in signatures.
 	For example the \texttt{cons} constructor accepts only aligned edits
@@ -343,7 +350,7 @@ data _⋎_ : ES as bs → ES as cs → Set where
         can be aligned, because they share the same set of \emph{source} nodes.
         However the scripts may get diasligned because of insert edits occuring
         at different points. 
-        \todo{example!}
+        \todo{example?}
         Interestingly alignment can be recovered by inserting no-operation edits in 
         these points. 
         The relation \texttt{e₁ ⊴ e₂} denotes that the edit script \texttt{e₂}
@@ -446,7 +453,7 @@ data Conflict : Val as bs → Val cs ds → Val es fs → Set where
 
 \begin{minted}{agda}
 data _⊔_↥_ : (u ~> v) → (u ~> w) → Conflict u v w → Set where
-  Cnf : (f : u ~> v) (g : u ~> w) → u ≠ v → v ≠ w  → u ≠ w → 
+  Cnf : (f : u ~> v) (g : u ~> w) → u ≢ v → v ≢ w  → u ≢ w → 
         (c : Conflict u v w) → f ⊔ g ↥ c
 \end{minted}
 
@@ -476,7 +483,7 @@ _⊔_ : (f : u ~> v) (g : u ~> w) →
         (∃ λ c → f ⊔ g ↥ c) ⊎ (∃ λ h → f ⊔ g ↧ h)
 \end{minted}
 	This operator is outlined in table \ref{table:merge}, where we have
-        omitted the obvious inequalities in the conflicts cases.
+        omitted the obvious inequalities in conflicts.
 
 	\begin{table*}[t]
 	\centering
@@ -555,22 +562,29 @@ _⊔₃_  _ _ {{p}} = merge₃ p
 	\cite{Devriese11}.
 
         In order to reason about merging we encode the specifications of
-        the merge operator in the following data type:
-\todo{This was called Diff3 in the thesis, but I think Merge3 is more appropriate
-because it is a reification of the function merge3}
+        the merge operator in the \texttt{Merge₃} data type, shown in Fig
+        \ref{fig:merge3}.
+        \todo{This was called Diff3 in the thesis, but I think Merge3 is more 
+          appropriate because it is a reification of the function merge3}
+
+\begin{figure*}[ht]
+\centering
 \begin{minted}{agda}
 data Merge₃ : ES xs ys → Es xs zs → ES₃ xs → Set where
- nil : Merge₃ [] [] []
- merge : f ⊔ g ↧ h → Merge₃ e₁ e₂ e₃ → Merge₃ (f ∷ e₁) (g ∷ e₂) (h ∷ e₃)
- conflict : f ⊔ g ↥ c → Merge₃ e₁ e₂ e₃ → Merge₃ (f ∷ e₁) (g ∷ e₂) (c ∷ᶜ e₃)
+  nil : Merge₃ [] [] []
+  merge : f ⊔ g ↧ h → Merge₃ e₁ e₂ e₃ → Merge₃ (f ∷ e₁) (g ∷ e₂) (h ∷ e₃)
+  conflict : f ⊔ g ↥ c → Merge₃ e₁ e₂ e₃ → Merge₃ (f ∷ e₁) (g ∷ e₂) (c ∷ᶜ e₃)
 \end{minted}
+\caption{Merge operator specification}
+\label{fig:merge3}
+\end{figure*}
+
         We then show that our merge operator satisify its requirements:
 \begin{minted}{agda}
             e₁ ⋎ e₂  ⇒  Merge₃ e₁ e₂ (e₁ ⊔₃ e₂)
 \end{minted}
-        The proof follows by induction on \texttt{e₁ ⋎ e₂}.
-
-        Also the converse proposition holds
+        The proof follows by induction on \texttt{e₁ ⋎ e₂}. Since the opposite
+        proposition also holds, this data type fully describes the merge operator:
 \begin{minted}{agda}
            Merge₃ e₁ e₂ e₃   ⇒   e₃ ≡ e₁ ⊔₃ e₂
 \end{minted}
@@ -579,7 +593,7 @@ data Merge₃ : ES xs ys → Es xs zs → ES₃ xs → Set where
         Firstly they must be mutually exlusive, i.e\ given
         two aligned edits \texttt{f} and \texttt{g} either they can be merged by
         some edit \texttt{h} (\texttt{f ⊔ g ↧ h}), or they trigger some conflict
-        \texttt{c} (f ⊔ g ↥ c). Secondly these relations must be deterministic, i.e.\
+        \texttt{c} (\texttt{f ⊔ g ↥ c}). Secondly these relations must be deterministic, i.e.\
         the third index is uniquely determined by the first two.
         
         Now that we have shown that the merge operator is in a one-to-one 
@@ -588,7 +602,7 @@ data Merge₃ : ES xs ys → Es xs zs → ES₃ xs → Set where
 
 	\paragraph{Diff3}
 	Now it is possible to provide the conventional \texttt{diff₃} interface, in
-	which the second object is considered the old common version:
+	which the second object is considered \emph{base}:
 \begin{minted}{agda}
 diff₃ : HList ys → HList xs → HList zs → ES₃ xs
 diff₃ y x z with align (diff-suff x y) (diff-suff x z)
@@ -612,7 +626,7 @@ diff₃ y x z | WA _ _ p = merge₃ p
         
         As a result the merged edit script must be first type-checked in order to
         retrieve the merged \emph{target} object.
-	The typing judgment \texttt{e ⇒ as} states that the edit script \texttt{e} 
+	The typing judgment \texttt{e ⇓ as} states that the edit script \texttt{e} 
 	is well typed and produces a list of type \texttt{HList as}.
 	The typing rules are straightforward:
 	
@@ -694,17 +708,17 @@ data _∈ᶜ_ (c : Conflict u v w) : ES₃ xs -> Set₁0 where
     that \texttt{e₁} and \texttt{e₂} contain two conflicting edits.
 
 \begin{minted}{agda}
-    Merge₃ e₁ e₂ e₃    ∧    c ∈ᶜ e₃     ⇒    e₁ , e₂ ↥ c
+    Merge₃ e₁ e₂ e₃    ∧    c ∈ᶜ e₃    ⇒    e₁ , e₂ ↥ c
 \end{minted}
     The proof follows immediately by induction.
     Conversely we show that \texttt{e₁ , e₂ ↥ c} implies the presence
     of a conflict in their merged edit script.
 \begin{minted}{agda}
-    Merge₃ e₁ e₂ e₃    ∧    e₁ , e₂ ↥ c      ⇒    c ∈ᶜ e₃
+    Merge₃ e₁ e₂ e₃    ∧    e₁ , e₂ ↥ c     ⇒    c ∈ᶜ e₃
 \end{minted}
     The proof also follow from induction. Note that we can discharge the paradoxical
-    base case in which the same edits are merged in \texttt{Merge₃ e₁ e₂ e₃}
-    (\texttt{f ⊔ g ↧ h}) and not in \texttt{e₁ , e₂ ↥ c} (\texttt{f ⊔ g ↥ c}),
+    base case in which the same edits are merged (\texttt{f ⊔ g ↧ h}) in 
+    \texttt{Merge₃ e₁ e₂ e₃} and not (\texttt{f ⊔ g ↥ c}) in \texttt{e₁ , e₂ ↥ c},
     because these two cases are mutually exclusive.    
 
     \subsection{Safety}
@@ -722,7 +736,7 @@ data _∈ᶜ_ (c : Conflict u v w) : ES₃ xs -> Set₁0 where
 \begin{minted}{agda}
 data _∈_ : F xs a → HList ys → Set where
   here : (α : F as a) → α ∈ Node α hs₁ ∷ hs₂
-  there : α ∈ hs₁ +++ hs₂ → α ∈ Node β hs₁ ∷ hs₂
+  there : α ∈ (hs₁ +++ hs₂) → α ∈ Node β hs₁ ∷ hs₂
 \end{minted}
 
     A similar data type denotes the presence of an edit in a script.
@@ -780,7 +794,7 @@ data _⊢ₑ_~>_  (e : ES xs ys) : Val as bs → Val cs ds → Set where
     The first one states that any edit found in the merged script,
     comes from either of the input scripts.
 \begin{minted}{agda}
-        f ∈ e₃   ,   Merged₃ e₁ e₂ e₃    ⇒    f ∈ₑ e₁   ∨   f ∈ₑ e₂
+   f ∈ e₃   ,   Merged₃ e₁ e₂ e₃    ⇒    f ∈ₑ e₁   ∨   f ∈ₑ e₂
 \end{minted}
     
     \paragraph{Persistence}
@@ -788,8 +802,8 @@ data _⊢ₑ_~>_  (e : ES xs ys) : Val as bs → Val cs ds → Set where
     edit scripts will be found in the merged edit script, given that it does
     perform a change and that the output script does not contain conflicts.
     The first hypothesis is needed because identity edits can be silently 
-    ignored in the merge semantics given by \texttt{f ⊔ g ↧ h} (\texttt{Id₁}, 
-    \texttt{Id₂}).
+    ignored in the merge semantics by either \texttt{Id₁} or
+    \texttt{Id₂}.
     On the other hand the second prerequisite is essential, because 
     our algorithm is \emph{persistent}, i.e.\ it refuses to back out changes 
     made by incompatible edits, but triggers an appropriate conflict instead.
@@ -798,7 +812,7 @@ data _⊢ₑ_~>_  (e : ES xs ys) : Val as bs → Val cs ds → Set where
     other words if the source and the target values are different.
 				
 \begin{minted}{agda}
-    f : u ~> v   ∧   u ≠ v   ∧   f ∈ₑ e₁
+    f : u ~> v   ∧   u ≢ v   ∧   f ∈ₑ e₁
              Merge₃ e₁ e₂ e₃                   ⇒        f ∈ₑ e₃
              NoConflict e₃ 
 \end{minted}
@@ -808,7 +822,7 @@ data _⊢ₑ_~>_  (e : ES xs ys) : Val as bs → Val cs ds → Set where
     \texttt{f ⊔ g ↧ h}. Note that \texttt{f ⊔ g ↥ c} cannot occur because of
     the \texttt{NoConflict e₃} hypothesis. By case analysis on \texttt{f ⊔ g ↧ h},
     \texttt{h} may be either \texttt{f} (\texttt{Id₂} or \texttt{Idem}), or 
-    \texttt{g} (\texttt{Id₁}. However this case is contradictory because we
+    \texttt{g} (\texttt{Id₁}). However this case is contradictory because we
     assumed \texttt{f} not to be an identity edit.
     
     The same property holds for edits that belong to the second edit, given
@@ -835,7 +849,7 @@ data Maximal : ES xs ys → ES xs zs → ES xs ws → Set where
 \end{minted}
 
     In the base case \texttt{Nil} all the three scripts
-    are empty and therefore form a (trivial) empty triplet.
+    are empty and therefore form a (trivial) maximal triplet.
     The \texttt{Idem} constructor adds the same edit to each of three scripts 
     that form a maximal triplet, correctly retaining this property.
     The presence of \texttt{Id₁} and \texttt{Id₂} does not break maximality, because
@@ -882,7 +896,7 @@ data Maximal : ES xs ys → ES xs zs → ES xs ws → Set where
 \begin{minted}{agda}
 data _⊢_⊏_ : Hist xs → F as a → F bs b → Set where
   here : β ∈ (hs₁ +++ hs₂) → Node α hs₁ ∷ hs₂ ⊢ α ⊏ β
-  there : hs₁ +++ hs₂ ⊢ α ⊏ β → Node γ hs₁ ∷ hs₂ ⊢ α ⊏ β
+  there : (hs₁ +++ hs₂) ⊢ α ⊏ β → Node γ hs₁ ∷ hs₂ ⊢ α ⊏ β
 \end{minted}
 
     The list is used as a stack of trees containing the nodes to be visited.
@@ -1030,7 +1044,7 @@ data _↤_⊏_ (e : ES xs ys) (α : F as a) (β : F bs b) : Set where
     Merged e₁ e₂ e₃
     e₁ ⊢ₑ f ⊏ g                  ⇒              e₃ ⊢ₑ f ⊏ g
     f : u ~> v  , g : w ~> z  
-    u ≠ v , w ≠ z
+    u ≢ v , w ≢ z
 \end{minted}
     Since \texttt{Merged₃ e₁ e₂ e₃} is a symmetric relation, the property holds 
     for edits of the second script. 
@@ -1060,6 +1074,7 @@ P. Q. Smith, and X. Y. Jones. ...reference text...
 
 \end{thebibliography}
 
+\listoftodos
 
 \end{document}
 
