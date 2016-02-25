@@ -44,8 +44,12 @@
 
 % Figures with border
 \usepackage{float}
-\floatstyle{boxed} 
+%\floatstyle{boxed} 
 \restylefloat{figure}
+
+\usepackage{graphicx}
+\usepackage{subfigure}
+\usepackage{fancyvrb}
 
 % Definitions for unicode characters not included
 \usepackage{newunicodechar}                   
@@ -54,6 +58,9 @@
 \newunicodechar{ₑ}{$_e$}
 \newunicodechar{ᵗ}{$^t$}
 \newunicodechar{ˢ}{$^s$}
+
+\usepackage{pifont}
+\newunicodechar{✗}{\ding{55}}
 
 
 \begin{document}
@@ -107,6 +114,100 @@ term1, term2
 keyword1, keyword2
 
 \section{Introduction}
+Our data is often replicated across different devices, so that we can access it simultaneously and
+manipulate at anytime. It is essential that the data is kept consistent, so that changes made
+on one device are then replicated on the others. A synchronization algorithm
+needs to detect the changes made at each device, combine them and then update each replica with the
+merged version. Software industry has first successfully adopted this work-flow by means of Version Control Systems, such as
+Git \cite{Git} and Mercurial \cite{Mercurial}, which employ an algorithm called \texttt{diff} to detect changes
+in software artifacts and \texttt{diff3} to merge independent changes made to the same source file.
+These algorithms are line-based, because they compare files line by line and therefore are not suitable
+for most of our data, which is typically stored in files according to complex binary formats. 
+Furthermore even when applied to files encoded as simple text-based formats fail to
+correctly merge basic changes. 
+The Comma Separated Values file format (CSV) is a simple text-based encoding of data stored in tables \cite{csv}.
+In a CSV file every line represents a row of the table and in every row commas are used to separated values from different columns.
+For instance a $3 \times 3$ table containing the numbers from 1 to 9 can
+is encoded in the file \texttt{a.csv} as follows:
+\begin{figure}[!h]
+\centering
+\begin{minipage}{.25\textwidth}
+  \centering
+  \begin{tabular}{ | c | c | c | }
+    \hline
+    1 & 2 & 3 \\ \hline
+    4 & 5 & 6 \\ \hline
+    7 & 8 & 9  \\ \hline
+  \end{tabular}
+\end{minipage}%
+\begin{minipage}{.25\textwidth}
+  \centering
+  \begin{verbatim}
+  $ cat a.csv
+  1,2,3
+  4,5,6
+  7,8,9
+  \end{verbatim}
+\end{minipage}%
+\end{figure}
+
+A user adds a columns filled with zero to the table and saves the new table in the file \texttt{b.csv}:
+\begin{figure}[h]
+\centering
+\begin{minipage}{.25\textwidth}
+  \centering
+  \begin{tabular}{ | c | c | c | c | }
+    \hline
+    \textcolor{blue}{0} & 1 & 2 & 3 \\ \hline
+    \textcolor{blue}{0} & 4 & 5 & 6 \\ \hline
+    \textcolor{blue}{0} & 7 & 8 & 9  \\ \hline
+  \end{tabular}
+\end{minipage}%
+\begin{minipage}{.25\textwidth}
+  \centering
+\begin{Verbatim}[commandchars=\\\{\}]
+  $ cat a.csv
+  \textcolor{blue}{0},1,2,3
+  \textcolor{blue}{0},4,5,6
+  \textcolor{blue}{0},7,8,9
+\end{Verbatim}
+\end{minipage}%$
+\end{figure} 
+Meanwhile another user changes some values in the third column of the original table and saves it as \texttt{c.csv}:
+\begin{figure}[h]
+\centering
+\begin{minipage}{.25\textwidth}
+  \centering
+  \begin{tabular}{ | c | c | c | }
+    \hline
+    1 & 2 & 3 \\ \hline
+    4 & 5 & \textcolor{magenta}{9} \\ \hline
+    7 & 8 & \textcolor{magenta}{15} \\ \hline
+  \end{tabular}
+\end{minipage}%
+\begin{minipage}{.25\textwidth}
+  \centering
+  \begin{Verbatim}[commandchars=\\\{\}]
+  $ cat a.csv
+  1,2,3
+  4,5,\textcolor{magenta}{9}
+  7,8,\textcolor{magenta}{15}
+  \end{Verbatim}
+\end{minipage}% $
+\end{figure}
+
+Unfortunately a line-based algorithms such as \texttt{diff3} fails to automatically merge the changes made to the original table, but raises spurious conflicts.
+The algorithm employs the \emph{three-way-merge} technique to compare and merge corresponding lines: a conflict is triggered when the same line is different in all the three versions.
+
+\begin{center}
+\begin{tabular}{| c | c | c | c |}
+\hline
+\texttt{b} & \texttt{a} & \texttt{c} & \texttt{merged} \\ \hline
+\texttt{\textcolor{blue}{0},1,2,3} & \texttt{1,2,3} & \texttt{1,2,3} & \textcolor{dgreen}{\texttt{1,2,3}} \\ \hline
+\texttt{\textcolor{blue}{0},4,5,6} & \texttt{4,5,6} & \texttt{4,5,\textcolor{magenta}{9}} & \textcolor{red}{✗}  \\ \hline
+\texttt{\textcolor{blue}{0},7,8,9} & \texttt{7,8,9} & \texttt{7,8,\textcolor{magenta}{15}} & \textcolor{red}{✗} \\ \hline
+\end{tabular}
+\end{center}
 
 \section{Universe}
 In order to implement data type generic algorithms we need a generic representation of algebraic data types.
