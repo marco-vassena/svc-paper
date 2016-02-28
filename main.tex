@@ -39,7 +39,7 @@
 
 \usepackage[dvipsnames]{xcolor}  		% Color package
 \definecolor{dgreen}{rgb}{0.,0.6,0.}    % Deep green
-\usepackage{caption}      
+\usepackage{caption}
 \usepackage{todonotes}	% todos
 
 % Figures with border
@@ -487,11 +487,35 @@ data _⋎_ : ES as bs → ES as cs → Set where
 	
         Intuitively two edit scripts that have the same \emph{source} object
         can be aligned, because they share the same set of \emph{source} nodes.
-        However the scripts may get diasligned because of insert edits occuring
+        However the scripts might be unaligned because of insert edits occurring
         at different points. 
-        \todo{example?}
+
+        \paragraph{Example}
+        Consider the list \texttt{x = [1]}, \texttt{y = [0,1]} and \texttt{z = [1,2]}.
+        The edit script \texttt{e₁} and \texttt{e₂} represent the \texttt{diff} between \texttt{x} and
+        respectively \texttt{y} and \texttt{z} \footnote{In this example \texttt{Cpy α} stands for \texttt{Upd α α}}.
+
+\begin{minted}{agda}
+e₁ e₂ : ES [ List Int ] [ List Int ]
+e₁ = [Ins  (::), Ins  1, Cpy (::), Cpy 1, Cpy []]
+e₂ = [Cpy (::), Cpy 1, Ins  (::), Ins  2, Cpy []] 
+\end{minted}       
+
+% \begin{minted}{agda}
+% e₁ e₂ : ES [ List Int ] [ List Int ]
+% e₁ = [Ins (::), Ins 1, Cpy (::), Cpy 1,                 Cpy []]
+% e₂ = [                Cpy (::), Cpy 1, Ins (::), Ins 2, Cpy []] 
+% \end{minted}       
+        The two edits are not aligned because there first edits are not aligned, since \texttt{⊥ ≢ ⟨ :: ⟩}
+        where \texttt{⊥} is the source value of \texttt{Ins (::)} in \texttt{e₁} and \texttt{⟨ :: ⟩} is
+        the source value of \texttt{Cpy (::)} in \texttt{e₂}.
+
         Interestingly alignment can be recovered by inserting no-operation edits in 
         these points. 
+\begin{minted}{agda}
+e₁* = [Ins (::), Ins 1, Cpy (::), Cpy 1, Nop   , Nop , Cpy []]
+e₂* = [Nop   , Nop , Cpy (::), Cpy 1, Ins (::), Ins 2, Cpy []] 
+\end{minted}
         The relation \texttt{e₁ ⊴ e₂} denotes that the edit script \texttt{e₂}
         extends \texttt{e₁} with a finite number of \texttt{Nop} edits.
         Note that the \texttt{Nop} edit change neither the \emph{source} nor 
