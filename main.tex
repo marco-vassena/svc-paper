@@ -329,10 +329,10 @@ data Val : List Set → List Set → Set where
 	deletion, insertion and update.
 \begin{minted}{agda}
 data _⇝_ : Val as bs → Val cs ds → Set where
-  Nop : ⊥ ~> ⊥
-  Del : (α : F as a) → ⟨ α ⟩ ~> ⊥
-  Ins : (α : F as a) → ⊥ ~> ⟨ α ⟩
-  Upd : (α : F as a) (β : F bs a) → ⟨ α ⟩ ~> ⟨ β ⟩
+  Nop : ⊥ ⇝ ⊥
+  Del : (α : F as a) → ⟨ α ⟩ ⇝ ⊥
+  Ins : (α : F as a) → ⊥ ⇝ ⟨ α ⟩
+  Upd : (α : F as a) (β : F bs a) → ⟨ α ⟩ ⇝ ⟨ β ⟩
 \end{minted}
 	Edits are indexed by two values, called respectively 
 	\emph{source} and \emph{target} values. The \texttt{Nop} edit is 
@@ -357,7 +357,7 @@ data _⇝_ : Val as bs → Val cs ds → Set where
 \begin{minted}{agda}
 data ES : List Set → List Set → Set where
   [] : ES [] []
-  _::_ : {v : Val as bs} {w : Val cs ds} → v ~> w → 
+  _::_ : {v : Val as bs} {w : Val cs ds} → v ⇝ w → 
           ES (as ++ xs) (cs ++ ys) → ES (bs ++ xs) (ds ++ ys)
 \end{minted}	
 	An edit script of type \texttt{ES xs ys} transforms
@@ -476,7 +476,7 @@ diff-suff :  (x : HList xs) (y : HList ys) → Diff x y (diff x y)
 \begin{minted}{agda}
 data _⋎_ : ES as bs → ES as cs → Set where
   nil : [] ⋎ []
-  cons : (f : u ~> v) (g : u ~> w) → e₁ ⋎ e₂ → f ∷ e₁ ⋎ g ∷ e₂ 
+  cons : (f : u ⇝ v) (g : u ⇝ w) → e₁ ⋎ e₂ → f ∷ e₁ ⋎ g ∷ e₂ 
 \end{minted}
 	The definition is recursive: two edit scripts are aligned if either  
         they are both empty or their heads and their tails are both aligned.
@@ -537,10 +537,10 @@ align : Diff x y e₁ → Diff x z e₂ → e₁ ~ e₂
 	aligned edits \texttt{f} and \texttt{g} succeeds producing the edit \texttt{h}.
 	
 \begin{minted} {agda}
-data _⊔_↧_ : (v ~> a) → (v ~> b) → (v ~> c) → Set where
-  Id₁ : (f : v ~> v) (g : v ~> w) → f ⊔ g ↧ g
-  Id₂ : (f : v ~> w) (g : v ~> v) → f ⊔ g ↧ f
-  Idem : (f : v ~> w) → f ⊔ f ↧ f
+data _⊔_↧_ : (v ⇝ a) → (v ⇝ b) → (v ⇝ c) → Set where
+  Id₁ : (f : v ⇝ v) (g : v ⇝ w) → f ⊔ g ↧ g
+  Id₂ : (f : v ⇝ w) (g : v ⇝ v) → f ⊔ g ↧ f
+  Idem : (f : v ⇝ w) → f ⊔ f ↧ f
 \end{minted}
 
 	Note that the data type definition already constraints the input edits to
@@ -591,8 +591,8 @@ data Conflict : Val as bs → Val cs ds → Val es fs → Set where
 	by the data type \texttt{f ⊔ g ↥ c}.
 
 \begin{minted}{agda}
-data _⊔_↥_ : (u ~> v) → (u ~> w) → Conflict u v w → Set where
-  Cnf : (f : u ~> v) (g : u ~> w) → u ≢ v → v ≢ w  → u ≢ w → 
+data _⊔_↥_ : (u ⇝ v) → (u ⇝ w) → Conflict u v w → Set where
+  Cnf : (f : u ⇝ v) (g : u ⇝ w) → u ≢ v → v ≢ w  → u ≢ w → 
         (c : Conflict u v w) → f ⊔ g ↥ c
 \end{minted}
 
@@ -618,7 +618,7 @@ data _⊔_↥_ : (u ~> v) → (u ~> w) → Conflict u v w → Set where
 	with a proof that \texttt{f ⊔ g ↥ c}.
 
 \begin{minted}{agda}
-_⊔_ : (f : u ~> v) (g : u ~> w) →
+_⊔_ : (f : u ⇝ v) (g : u ⇝ w) →
         (∃ λ c → f ⊔ g ↥ c) ⊎ (∃ λ h → f ⊔ g ↧ h)
 \end{minted}
 	This operator is outlined in table \ref{table:merge}, where we have
@@ -671,7 +671,7 @@ _⊔_ : (f : u ~> v) (g : u ~> w) →
 \begin{minted}{agda}
 data ES₃ : List Set → Set where
   [] : ES₃ []
-  _∷_ : {u : Val as bs} → u ~> v → ES₃ (as ++ xs) → ES₃ (bs ++ xs)
+  _∷_ : {u : Val as bs} → u ⇝ v → ES₃ (as ++ xs) → ES₃ (bs ++ xs)
   _∷ᶜ_ : {u : Val as bs} → (c : Conflict u v w) → 
              ES₃ (as ++ xs) → ES₃ (bs ++ xs)
 \end{minted}
@@ -881,30 +881,30 @@ data _∈_ : F xs a → HList ys → Set where
     A similar data type denotes the presence of an edit in a script.
 
 \begin{minted}{agda}
-data _∈ₑ_ : v ~> w → ES xs ys → Set where
-  here : (f : v ~> w) → f ∈ₑ f ∷ e
+data _∈ₑ_ : v ⇝ w → ES xs ys → Set where
+  here : (f : v ⇝ w) → f ∈ₑ f ∷ e
   there : f ∈ₑ e → f ∈ₑ g ∷ e
 \end{minted}
     Lastly the judgment \texttt{e ⊢ₑ u \textasciitilde> v} denotes that
     the script \texttt{e} contains some edit of type \texttt{u \textasciitilde> v}.
 \begin{minted}{agda}
-data _⊢ₑ_~>_  (e : ES xs ys) : Val as bs → Val cs ds → Set where
-  Nop : Nop ∈ₑ e → e ⊢ₑ ⊥ ~> ⊥
-  Del : Del α ∈ₑ e → e ⊢ₑ ⟨ α ⟩ ~> ⊥
-  Ins : Ins α ∈ₑ e → e ⊢ₑ ⊥ ~> ⟨ α ⟩
-  Upd : Upd α β ∈ₑ e → e ⊢ₑ ⟨ α ⟩ ~> ⟨ β ⟩ 
+data _⊢ₑ_⇝_  (e : ES xs ys) : Val as bs → Val cs ds → Set where
+  Nop : Nop ∈ₑ e → e ⊢ₑ ⊥ ⇝ ⊥
+  Del : Del α ∈ₑ e → e ⊢ₑ ⟨ α ⟩ ⇝ ⊥
+  Ins : Ins α ∈ₑ e → e ⊢ₑ ⊥ ⇝ ⟨ α ⟩
+  Upd : Upd α β ∈ₑ e → e ⊢ₑ ⟨ α ⟩ ⇝ ⟨ β ⟩ 
 \end{minted}
     Two fundamental properties of the edit script data type guarantee that
     the source node of an edit will be part of the \emph{source} of the script and
     similarly the target node of an edit will show up in its \emph{target}.
 % I think I will skip this one and directly state the more interesting one
 % \begin{minted}{agda}
-%    ∀   f : ⟨ α ⟩ ~> v  .  f ∈ₑ e   ⇒   α ∈ ⟪ e ⟫
-%    ∀   f : v ~> ⟨ α ⟩  .  f ∈ₑ e   ⇒   α ∈ ⟦ e ⟧
+%    ∀   f : ⟨ α ⟩ ⇝ v  .  f ∈ₑ e   ⇒   α ∈ ⟪ e ⟫
+%    ∀   f : v ⇝ ⟨ α ⟩  .  f ∈ₑ e   ⇒   α ∈ ⟦ e ⟧
 % \end{minted}
 \begin{minted}{agda}
-    e ⊢ₑ ⟨ α ⟩ ~> v   ⇒   α ∈ ⟪ e ⟫
-    e ⊢ₑ v ~> ⟨ α ⟩   ⇒   α ∈ ⟦ e ⟧
+    e ⊢ₑ ⟨ α ⟩ ⇝ v   ⇒   α ∈ ⟪ e ⟫
+    e ⊢ₑ v ⇝ ⟨ α ⟩   ⇒   α ∈ ⟦ e ⟧
 \end{minted}
 
     \paragraph{Data Origin}
@@ -913,8 +913,8 @@ data _⊢ₑ_~>_  (e : ES xs ys) : Val as bs → Val cs ds → Set where
     that any node mentioned in an edit script comes from either the \emph{source}
     or the \emph{target} object.
 \begin{minted}{agda}
-    e ⊢ₑ ⟨ α ⟩ ~> v   ,   Diff x y e   ⇒   α ∈ x 
-    e ⊢ₑ v ~> ⟨ α ⟩   ,   Diff x y e   ⇒   α ∈ y 
+    e ⊢ₑ ⟨ α ⟩ ⇝ v   ,   Diff x y e   ⇒   α ∈ x 
+    e ⊢ₑ v ⇝ ⟨ α ⟩   ,   Diff x y e   ⇒   α ∈ y 
 \end{minted}
 
     \paragraph{Data Retention}
@@ -923,8 +923,8 @@ data _⊢ₑ_~>_  (e : ES xs ys) : Val as bs → Val cs ds → Set where
     actually processed by some edit in the script.
 
 \begin{minted}{agda}
-    Diff x y e   ,   α ∈ x   ⇒   ∃ v . e ⊢ₑ ⟨ α ⟩ ~> v
-    Diff x y e   ,   α ∈ y   ⇒   ∃ v . e ⊢ₑ v ~> ⟨ α ⟩
+    Diff x y e   ,   α ∈ x   ⇒   ∃ v . e ⊢ₑ ⟨ α ⟩ ⇝ v
+    Diff x y e   ,   α ∈ y   ⇒   ∃ v . e ⊢ₑ v ⇝ ⟨ α ⟩
 \end{minted}
  
     \paragraph{Edit Origin}
@@ -951,7 +951,7 @@ data _⊢ₑ_~>_  (e : ES xs ys) : Val as bs → Val cs ds → Set where
     other words if the source and the target values are different.
 				
 \begin{minted}{agda}
-    f : u ~> v   ∧   u ≢ v   ∧   f ∈ₑ e₁
+    f : u ⇝ v   ∧   u ≢ v   ∧   f ∈ₑ e₁
              Merge₃ e₁ e₂ e₃                   ⇒        f ∈ₑ e₃
              NoConflict e₃ 
 \end{minted}
@@ -981,9 +981,9 @@ data _⊢ₑ_~>_  (e : ES xs ys) : Val as bs → Val cs ds → Set where
 data Maximal : ES xs ys → ES xs zs → ES xs ws → Set where
  Nil : Maximal [] [] []
  Idem : Maximal e₁ e₂ e₃ → Maximal (f ∷ e₁) (f ∷ e₂) (f ∷ e₃)
- Id₁ : (f : v ~> v) (g : v ~> w) → Maximal e₁ e₂ e₃ → 
+ Id₁ : (f : v ⇝ v) (g : v ⇝ w) → Maximal e₁ e₂ e₃ → 
          Maximal (f ∷ e₁) (g ∷ e₂) (g ∷ e₃)
- Id₂ : (f : v ~> w) (g : v ~> v) → Maximal e₁ e₂ e₃ → 
+ Id₂ : (f : v ⇝ w) (g : v ⇝ v) → Maximal e₁ e₂ e₃ → 
          Maximal (f ∷ e₁) (g ∷ e₂) (f ∷ e₃)
 \end{minted}
 
@@ -1056,24 +1056,24 @@ data _⊢_⊏_ : Hist xs → F as a → F bs b → Set where
     \texttt{f} precedes the edit \texttt{g}.
 
 \begin{minted}{agda}
-data _⊢ₑ_⊏_ : ES xs ys → u ~> v → w ~> z → Set where
-  here : (f : w ~> z) → g ∈ₑ e → f ∷ e ⊢ₑ f ⊏ g 
-  there : (h : s ~> t) → e ⊢ₑ f ⊏ g → h ∷ e ⊢ₑ f ⊏ g 
+data _⊢ₑ_⊏_ : ES xs ys → u ⇝ v → w ⇝ z → Set where
+  here : (f : w ⇝ z) → g ∈ₑ e → f ∷ e ⊢ₑ f ⊏ g 
+  there : (h : s ⇝ t) → e ⊢ₑ f ⊏ g → h ∷ e ⊢ₑ f ⊏ g 
 \end{minted}
 
     The following basic properties ensure that the order of two edits 
     is reflected by the order of their source nodes in the \emph{source} object.
 \begin{minted}{agda}
-        f : ⟨ α ⟩ ~> v 
-        g : ⟨ β ⟩ ~> w       ⇒       ⟪ e ⟫ ⊢ α ⊏ β
+        f : ⟨ α ⟩ ⇝ v 
+        g : ⟨ β ⟩ ⇝ w       ⇒       ⟪ e ⟫ ⊢ α ⊏ β
         e ⊢ₑ f ⊏ g 
 \end{minted}
     Similarly the order of the target nodes is preserved in the \emph{target} 
     object.    
 
 \begin{minted}{agda}
-        f : v ~> ⟨ α ⟩
-        g : w ~> ⟨ β ⟩       ⇒      ⟦ e ⟧ ⊢ α ⊏ β
+        f : v ⇝ ⟨ α ⟩
+        g : w ⇝ ⟨ β ⟩       ⇒      ⟦ e ⟧ ⊢ α ⊏ β
         e ⊢ₑ f ⊏ g
 \end{minted}
 
@@ -1081,10 +1081,10 @@ data _⊢ₑ_⊏_ : ES xs ys → u ~> v → w ~> z → Set where
     object one node precedes another, then the corresponding edits in their diff 
     will share the same order.
 \begin{minted}{agda}
-Diff x y e  ,  x ⊢ α ⊏ β    ⇒    ∃  f : ⟨ α ⟩ ~> u , g : ⟨ β ⟩ ~> v . 
+Diff x y e  ,  x ⊢ α ⊏ β    ⇒    ∃  f : ⟨ α ⟩ ⇝ u , g : ⟨ β ⟩ ⇝ v . 
                                                 e ⊢ₑ f ⊏ g
 
-Diff x y e  ,  y ⊢ α ⊏ β    ⇒    ∃  f : u ~> ⟨ α ⟩ , g : v ~> ⟨ β ⟩ . 
+Diff x y e  ,  y ⊢ α ⊏ β    ⇒    ∃  f : u ⇝ ⟨ α ⟩ , g : v ⇝ ⟨ β ⟩ . 
                                                 e ⊢ₑ f ⊏ g
 \end{minted}
 
@@ -1115,9 +1115,9 @@ Diff x y e  ,  y ⊢ α ⊏ β    ⇒    ∃  f : u ~> ⟨ α ⟩ , g : v ~> ⟨
     order-preserving embedding:
 \begin{minted}{agda}
 data _↦_⊏_ (e : ES xs ys) (α : F as a) (β : F bs b) : Set where
-  Del₁ : e ⊢ₑ ⟨ α ⟩ ~> ⊥ → e ↦ α ⊏ β
-  Del₂ : e ⊢ₑ ⟨ β ⟩ ~> ⊥ → e ↦ α ⊏ β
-  Map₂ : e ⊢ₑ ⟨ α ⟩ ~> ⟨ γ ⟩ → e ⊢ₑ ⟨ β ⟩ ~> ⟨ φ ⟩ → 
+  Del₁ : e ⊢ₑ ⟨ α ⟩ ⇝ ⊥ → e ↦ α ⊏ β
+  Del₂ : e ⊢ₑ ⟨ β ⟩ ⇝ ⊥ → e ↦ α ⊏ β
+  Map₂ : e ⊢ₑ ⟨ α ⟩ ⇝ ⟨ γ ⟩ → e ⊢ₑ ⟨ β ⟩ ⇝ ⟨ φ ⟩ → 
          ⟦ e ⟧ ⊢ γ ⊏ φ → e ↦ α ⊏ β
 \end{minted}
 
@@ -1130,7 +1130,7 @@ data _↦_⊏_ (e : ES xs ys) (α : F as a) (β : F bs b) : Set where
     In the first two cases it follows that either \texttt{f} or \texttt{g} is
     a delete and the theorem holds (\texttt{Del₁} and \texttt{Del₂}).
     In the last case \texttt{f} and \texttt{g} are both updates then 
-    \texttt{e ⊢ₑ ⟨ α ⟩ ~> ⟨ γ ⟩} and \texttt{e ⊢ₑ ⟨ β ⟩ ~> ⟨ Φ ⟩}.
+    \texttt{e ⊢ₑ ⟨ α ⟩ ⇝ ⟨ γ ⟩} and \texttt{e ⊢ₑ ⟨ β ⟩ ⇝ ⟨ Φ ⟩}.
     Since \texttt{e ⊢ₑ f ⊏ g} we can apply the first edit-order property from
     which follows that \texttt{⟦ e ⟧ ⊢ γ ⊏ Φ} and the theorem holds (\texttt{Map₂}).
 
@@ -1158,9 +1158,9 @@ data _↦_⊏_ (e : ES xs ys) (α : F as a) (β : F bs b) : Set where
 
 \begin{minted}{agda}
 data _↤_⊏_ (e : ES xs ys) (α : F as a) (β : F bs b) : Set where
-  Ins₁ : e ⊢ₑ ⊥ ~> ⟨ α ⟩ → e ↤ α ⊏ β
-  Ins₂ : e ⊢ₑ ⊥ ~> ⟨ β ⟩ → e ↤ α ⊏ β
-  Map₂ : e ⊢ₑ ⟨ γ ⟩ ~> ⟨ α ⟩ → e ⊢ₑ ⟨ φ ⟩ ~> ⟨ β ⟩ → 
+  Ins₁ : e ⊢ₑ ⊥ ⇝ ⟨ α ⟩ → e ↤ α ⊏ β
+  Ins₂ : e ⊢ₑ ⊥ ⇝ ⟨ β ⟩ → e ↤ α ⊏ β
+  Map₂ : e ⊢ₑ ⟨ γ ⟩ ⇝ ⟨ α ⟩ → e ⊢ₑ ⟨ φ ⟩ ⇝ ⟨ β ⟩ → 
        ⟪ e ⟫ ⊢ γ ⊏ φ → e ↤ α ⊏ β
 \end{minted}
 
@@ -1182,7 +1182,7 @@ data _↤_⊏_ (e : ES xs ys) (α : F as a) (β : F bs b) : Set where
 \begin{minted}{agda}
     Merged e₁ e₂ e₃
     e₁ ⊢ₑ f ⊏ g                  ⇒              e₃ ⊢ₑ f ⊏ g
-    f : u ~> v  , g : w ~> z  
+    f : u ⇝ v  , g : w ⇝ z  
     u ≢ v , w ≢ z
 \end{minted}
     Since \texttt{Merged₃ e₁ e₂ e₃} is a symmetric relation, the property holds 
