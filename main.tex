@@ -115,19 +115,18 @@ keyword1, keyword2
 
 \section{Introduction}
 Our data is often replicated across different devices, so that we can access it simultaneously and
-manipulate at anytime. It is essential that the data is kept consistent, so that changes made
-on one device are then replicated on the others. A synchronization algorithm
-needs to detect the changes made at each device, combine them and then update each replica with the
-merged version. Software industry has first successfully adopted this work-flow by means of Version Control Systems, such as
+manipulate it at anytime. In this setting it is essential that the data is kept consistent, so that changes made on one device are then replicated on the others. A synchronization algorithm
+needs to detect the changes made on each replica, combine them and propagate them, updating each device with the merged version. Software industry has first successfully adopted this work-flow by means of Version Control Systems, such as
 Git \cite{Git} and Mercurial \cite{Mercurial}, which employ an algorithm called \texttt{diff} to detect changes
 in software artifacts and \texttt{diff3} to merge independent changes made to the same source file.
 These algorithms are line-based, because they compare files line by line and therefore are not suitable
 for most of our data, which is typically stored in files according to complex binary formats. 
-Furthermore even when applied to files encoded as simple text-based formats fail to
-correctly merge basic changes. 
+Furthermore \texttt{diff3} fail to correctly merge basic changes even when applied to data encoded in simple text-based formats.
+
+\paragraph{Example}
 The Comma Separated Values file format (CSV) is a simple text-based encoding of data stored in tables \cite{csv}.
-In a CSV file every line represents a row of the table and in every row commas are used to separated values from different columns.
-For instance a $3 \times 3$ table containing the numbers from 1 to 9 can
+In a CSV file every line represents a row of the table and in every row commas are used to separated values in different columns.
+For instance a $3 \times 3$ table containing numbers from 1 to 9 can
 is encoded in the file \texttt{a.csv} as follows:
 \begin{figure}[!h]
 \centering
@@ -151,7 +150,9 @@ is encoded in the file \texttt{a.csv} as follows:
 \end{minipage}%
 \end{figure}
 
-A user adds a columns filled with zero to the table and saves the new table in the file \texttt{b.csv}:
+\newpage
+Imagine that two users are simultaneously working on this table.
+The first user adds a column filled with zero and saves the new table in \texttt{b.csv}:
 \begin{figure}[h]
 \centering
 \begin{minipage}{.25\textwidth}
@@ -166,14 +167,15 @@ A user adds a columns filled with zero to the table and saves the new table in t
 \begin{minipage}{.25\textwidth}
   \centering
 \begin{Verbatim}[commandchars=\\\{\}]
-  $ cat a.csv
+  $ cat b.csv
   \textcolor{blue}{0},1,2,3
   \textcolor{blue}{0},4,5,6
   \textcolor{blue}{0},7,8,9
 \end{Verbatim}
 \end{minipage}%$
 \end{figure} 
-Meanwhile another user changes some values in the third column of the original table and saves it as \texttt{c.csv}:
+
+The second user changes some values in the third column and saves the new table in  \texttt{c.csv}:
 \begin{figure}[h]
 \centering
 \begin{minipage}{.25\textwidth}
@@ -188,7 +190,7 @@ Meanwhile another user changes some values in the third column of the original t
 \begin{minipage}{.25\textwidth}
   \centering
   \begin{Verbatim}[commandchars=\\\{\}]
-  $ cat a.csv
+  $ cat c.csv
   1,2,3
   4,5,\textcolor{magenta}{9}
   7,8,\textcolor{magenta}{15}
@@ -196,18 +198,53 @@ Meanwhile another user changes some values in the third column of the original t
 \end{minipage}% $
 \end{figure}
 
-Unfortunately a line-based algorithms such as \texttt{diff3} fails to automatically merge the changes made to the original table, but raises spurious conflicts.
-The algorithm employs the \emph{three-way-merge} technique to compare and merge corresponding lines: a conflict is triggered when the same line is different in all the three versions.
+The two users would like to synchronize their work now and decide to use 
+\texttt{diff3} to merge their versions. They have modified \emph{indipendent} parts of the table, therefore they are confident that it is should be possible to automatically merge the changes, without incurring in a conflict.
+Unfortunately \texttt{diff3} is a line-based algorithms therefore it compares files line by line, without considering the actual structure of the data stored in the files. As a result the algorithm fails to merge the two tables but raises spurious conflicts.
 
+In particular \texttt{diff3} employs the \emph{three-way-merge} technique to compare and merge the corresponding lines of three files. The following table shows the result of applying this technique to the previous tables:
 \begin{center}
 \begin{tabular}{| c | c | c | c |}
 \hline
-\texttt{b} & \texttt{a} & \texttt{c} & \texttt{merged} \\ \hline
+\texttt{b} & \texttt{a} & \texttt{c} & \texttt{diff3 b a c} \\ \hline
 \texttt{\textcolor{blue}{0},1,2,3} & \texttt{1,2,3} & \texttt{1,2,3} & \textcolor{dgreen}{\texttt{1,2,3}} \\ \hline
 \texttt{\textcolor{blue}{0},4,5,6} & \texttt{4,5,6} & \texttt{4,5,\textcolor{magenta}{9}} & \textcolor{red}{✗}  \\ \hline
 \texttt{\textcolor{blue}{0},7,8,9} & \texttt{7,8,9} & \texttt{7,8,\textcolor{magenta}{15}} & \textcolor{red}{✗} \\ \hline
 \end{tabular}
 \end{center}
+A merge is possible when there is at most one different version for the same line, as it happens in the first row.
+A conflict is instead triggered when the same line is different in all the three versions, which is the case in the second and third row.
+
+
+\paragraph{Discussion}
+The main limitation of \texttt{diff3} and \texttt{diff} is that they are  coarse-grained, because they operate on data representation with a fixed precision consisting in one line of text, therefore disregarding completely any information about the actual structure of the data.
+If \texttt{diff} and \texttt{diff3} were aware of the table structure, consisting of columns and rows, then \texttt{diff} could exactly represent the differences in each version and \texttt{diff3} could automatically merge them, as the users expected:
+\begin{center}
+\begin{tabular}{| c | c | c | c |}
+\hline
+\textcolor{blue}{0} & 1 & 2 & 3 \\ \hline
+\textcolor{blue}{0} & 4 & 5 & \textcolor{magenta}{9} \\ \hline
+\textcolor{blue}{0} & 7 & 8 & \textcolor{magenta}{15} \\ \hline
+\end{tabular}
+\end{center}
+
+% Obviously we do not want to implement format specific \texttt{diff} and \texttt{diff3} algorithms, since this would hinder reusability, but instead
+% they manipulate data directly, assuming that parsers and serializers for it are available. Furthermore we would like our algorithms to be as reusable as possible, with data of any possible shape.
+
+\subsection{Contributions}
+In this paper we make the following contributions:
+\begin{itemize}
+%\item Should I include \texttt{diff}? 
+\item We define a type-safe edit script data type that supports \emph{delete},
+      \emph{insert} and \emph{update} edits and that represents the differences
+      between two objects. We give the formal specifications of a \texttt{diff} 
+      algorithm in terms of the edit scrip data type.
+\item We formalize the \emph{three-way-merge} strategy and give a precise semantics 
+      of \emph{mergeable} and \emph{conflicting} edits. We give the formal   
+      specifications of a \texttt{diff3} algorithm in terms of our edit semantics. 
+\item We show a data-type generic, three-way \texttt{diff3} algorithm that satisfy
+      our specifications and we study its formal properties.
+\end{itemize}
 
 \section{Universe}
 In order to implement data type generic algorithms we need a generic representation of algebraic data types.
@@ -236,6 +273,7 @@ to their fields.
   postulate F : List Set → Set → Set 
   postulate _=?=_ : (α : F as a) (β : F bs b) → Dec (α ≡ β)
 \end{minted}	
+        \todo{Not needed if we don't discuss diff}
 	The data type \texttt{Dec (α ≡ β)} denotes decidable equality between
 	two nodes, which either contains a proof of the actual equality
 	or a counter example.
@@ -290,7 +328,7 @@ data Val : List Set → List Set → Set where
 	The set of edit operations considered includes a no-operation, node 
 	deletion, insertion and update.
 \begin{minted}{agda}
-data _~>_ : Val as bs → Val cs ds → Set where
+data _⇝_ : Val as bs → Val cs ds → Set where
   Nop : ⊥ ~> ⊥
   Del : (α : F as a) → ⟨ α ⟩ ~> ⊥
   Ins : (α : F as a) → ⊥ ~> ⟨ α ⟩
