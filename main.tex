@@ -266,13 +266,13 @@ to their fields.
 	\texttt{Node} requires the same types \texttt{as} in the fields types and in 
 	the list of subtrees, hence denoting a 	well-typed application of a 
 	constructor to its arguments.
-	Its definition is unimportant for the moment, therefore we will leave it
+	Its implementation is unimportant for the moment, therefore we will leave it
 	abstract using a postulate. Furthermore a basic comparison
 	function is assumed.
 \begin{minted}{agda}
   postulate F : List Set → Set → Set 
   postulate _=?=_ : (α : F as a) (β : F bs b) → Dec (α ≡ β)
-\end{minted}	
+\end{minted}
         \todo{Not needed if we don't discuss diff}
 	The data type \texttt{Dec (α ≡ β)} denotes decidable equality between
 	two nodes, which either contains a proof of the actual equality
@@ -298,6 +298,18 @@ data _≡_ : F as a → F bs b → Set where
 	In section \ref{Haskell} we show how it is possible to implement these 
 	features in a strongly typed functional language like Haskell.
 	
+        \paragraph{Example} 
+        The list \texttt{[1,2]} can be encoded in this universe as: 
+\begin{Verbatim}[commandchars=\\\{\}]
+hs : HList [List Int]
+hs = Node (\textcolor{blue}{::}) [Node \textcolor{magenta}{1} [], Node (\textcolor{blue}{::}) [Node \textcolor{magenta}{2} [], Node \textcolor{blue}{[]} []]]
+\end{Verbatim}
+        Where \texttt{(\textcolor{blue}{::}) : F [Int, List Int] (List Int)}
+        and \texttt{\textcolor{blue}{[]} : F [] (List Int)} are the reification of respectively the cons constructor and the
+        empty list constructor, specialized without loss of generality to the type \texttt{List Int}.
+        Similarly in our examples we will automatically lift numbers to node constructors, that is
+        \texttt{\textcolor{magenta}{1}, \textcolor{magenta}{2} : F [] [Int]}.
+
 	In the following we will use two auxiliary functions to append and split 
 	heterogeneous lists:
 \begin{minted}{agda}
@@ -783,12 +795,23 @@ diff₃ y x z | WA _ _ p = merge₃ p
 	Even though merging might succeed without triggering any conflic the
         merged edit script might be invalid, i.e. it will not produce a well-typed
         object as \emph{target}. The reason is that the merge operator \texttt{⊔₃} 
-        merges edits only mechanically and the edit script obtained by joining two
+        merges edits \emph{pointwise}, therefore the script obtained by joining two
         well-typed edit script may not be well-typed.
-        \todo{Example?}
+        Consider for instance the following edit scripts:
+\begin{minted}{agda}
+e₁ e₂ : ES [] [List Int]
+e₁ = [Ins [], Nop]
+e₂ = [Nop, Ins []]
+\end{minted}
+        Merging the two edits with \texttt{e₁ ⊔₃ e₂} yields a conflict free, yet ill-typed edit script
+\begin{minted}{agda}
+e₃ : ES₃ []
+e₃ = [Ins [], Ins []]
+\end{minted}
+        The problem is that the first insert produces a constructor that does not take any arguments,
+        yet the tail of the script gives another empty list as argument.        
         
-        As a result the merged edit script must be first type-checked in order to
-        retrieve the merged \emph{target} object.
+        The merged edit script must be first type-checked in order to retrieve the merged \emph{target} object.
 	The typing judgment \texttt{e ⇓ as} states that the edit script \texttt{e} 
 	is well typed and produces a list of type \texttt{HList as}.
 	The typing rules are straightforward:
