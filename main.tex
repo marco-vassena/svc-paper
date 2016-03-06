@@ -31,6 +31,7 @@
 % authoryear    To obtain author/year citation style instead of numeric.
 
 \usepackage{amsmath}
+\usepackage{hyperref}
 
 \usepackage{minted} % Code listing with reasonable good highlighting
 \usepackage{bussproofs}   % For typing judgments
@@ -114,14 +115,13 @@ term1, term2
 keyword1, keyword2
 
 \section{Introduction}
-Our data is often replicated across different devices, so that we can access it simultaneously and
-manipulate it at anytime. In this setting it is essential that the data is kept consistent, so that changes made on one device are then replicated on the others. A synchronization algorithm
-needs to detect the changes made on each replica, combine them and propagate them, updating each device with the merged version. Software industry has first successfully adopted this work-flow by means of Version Control Systems, such as
-Git \cite{Git} and Mercurial \cite{Mercurial}, which employ an algorithm called \texttt{diff} to detect changes
-in software artifacts and \texttt{diff3} to merge independent changes made to the same source file.
-These algorithms are line-based, because they compare files line by line and therefore are not suitable
-for most of our data, which is typically stored in files according to complex binary formats. 
-Furthermore \texttt{diff3} fail to correctly merge basic changes even when applied to data encoded in simple text-based formats.
+Version control systems (VCS) such as Git \cite{Git} and Mercurial \cite{Mercurial}
+are used in the software industry, as well as in the open source community and by researchers all over the world in the software development process.
+These tools track all the changes made to software throughout its lifetime, making it possible to quickly roll back to any previous version. Furthermore developers can simultaneously work on the same project and use a VCS to merge their changes together.
+VCS provides these features by means of two algorithms, called \texttt{diff} and \texttt{diff3}.
+The first one detects changes in source code files and it is used to track their history, while the other merges independent changes made to the code base, allowing simultaneous development.
+These algorithms are line-based, because they compare and manipulate files line by line and can be used not only on software artifacts, but with any text-based file. 
+Unfortunately their fixed-granularity limit their precision when detecting changes and deteriorate their merging capabilities. In this paper we develop a data-type generic version of the \texttt{diff} and \texttt{diff3} algorithms, that improve their precision and applicability.
 
 \paragraph{Example}
 The Comma Separated Values file format (CSV) is a simple text-based encoding of data stored in tables \cite{csv}.
@@ -207,7 +207,7 @@ In particular \texttt{diff3} employs the \emph{three-way-merge} technique to com
 \begin{tabular}{| c | c | c | c |}
 \hline
 \texttt{b} & \texttt{a} & \texttt{c} & \texttt{diff3 b a c} \\ \hline
-\texttt{\textcolor{blue}{0},1,2,3} & \texttt{1,2,3} & \texttt{1,2,3} & \textcolor{dgreen}{\texttt{1,2,3}} \\ \hline
+\texttt{\textcolor{blue}{0},1,2,3} & \texttt{1,2,3} & \texttt{1,2,3} & \textcolor{dgreen}{\texttt{0,1,2,3}} \\ \hline
 \texttt{\textcolor{blue}{0},4,5,6} & \texttt{4,5,6} & \texttt{4,5,\textcolor{magenta}{9}} & \textcolor{red}{✗}  \\ \hline
 \texttt{\textcolor{blue}{0},7,8,9} & \texttt{7,8,9} & \texttt{7,8,\textcolor{magenta}{15}} & \textcolor{red}{✗} \\ \hline
 \end{tabular}
@@ -234,17 +234,25 @@ If \texttt{diff} and \texttt{diff3} were aware of the table structure, consistin
 \subsection{Contributions}
 In this paper we make the following contributions:
 \begin{itemize}
-%\item Should I include \texttt{diff}? 
-\item We define a type-safe edit script data type that supports \emph{delete},
-      \emph{insert} and \emph{update} edits and that represents the differences
-      between two objects. We give the formal specifications of a \texttt{diff} 
+\item In section \ref{subsec:edit-script} We define a type-safe edit script data 
+      type that supports \emph{delete}, \emph{insert} and \emph{update} edits and 
+      that represents the differences between two objects. In section 
+      \ref{subsec:diff-algo} we give the formal specifications of a \texttt{diff} 
       algorithm in terms of the edit scrip data type.
-\item We formalize the \emph{three-way-merge} strategy and give a precise semantics 
-      of \emph{mergeable} and \emph{conflicting} edits. We give the formal   
-      specifications of a \texttt{diff3} algorithm in terms of our edit semantics. 
-\item We show a data-type generic, three-way \texttt{diff3} algorithm that satisfy
-      our specifications and we study its formal properties.
+\item In section \ref{subsec:merge-semantics} we formalize the 
+      \emph{three-way-merge} strategy and give a precise semantics of 
+      \emph{mergeable} and \emph{conflicting} edits. We give 
+      the formal specifications of a \texttt{diff3} algorithm in terms of our edit 
+      semantics. 
+\item In section \ref{subsec:diff3-algo} we show a data-type generic, three-way 
+      \texttt{diff3} algorithm that satisfy our specifications and we study its 
+      formal properties in section \ref{sec:properties}.
 \end{itemize}
+We have implemented these algorithms using generic programming techniques in Agda \cite{agda}, a programming language with dependent types and a proof assistant. 
+Dependent types are particularly convenient in this setting to idiomatically encode the pre-conditions and post-conditions of our algorithms and ultimately verify their properties.
+The source code containing the \texttt{diff} and \texttt{diff3} algorithms, their properties and formal proofs are available online\footnote{TODO create separate repo just for this}. 
+For the sake of presentation we have simplified the code presented in this paper, for instance by 
+hiding implicit arguments and universe levels.
 
 \section{Universe}
 In order to implement data type generic algorithms we need a generic representation of algebraic data types.
@@ -364,6 +372,7 @@ data _⇝_ : Val as bs → Val cs ds → Set where
 	category.
 	
 	\subsection{Edit Script}
+        \label{subsec:edit-script}
 	An edit script collects a finite number of edit operations, 
 	while preserving type-safety. 
 \begin{minted}{agda}
@@ -405,6 +414,7 @@ data ES : List Set → List Set → Set where
 \end{minted}
 
 	\subsection{Diff algorithm}
+        \label{subsec:diff-algo}
 	The \texttt{diff3} algorithm employs a \texttt{diff} algorithm that has the 
 	following	signature:
 \begin{minted}{agda}
@@ -560,7 +570,7 @@ align : Diff x y e₁ → Diff x z e₂ → e₁ ~ e₂
 \end{minted}
 
 	\subsection{Merge Semantics}
-        \label{merge-semantics}
+        \label{subsec:merge-semantics}
 	Our merge semantics is defined over aligned edits.
 	Two aligned edits contain at most three distinct values: 
 	one common source and two, 	possibly different, targets, which 
@@ -715,6 +725,9 @@ data ES₃ : List Set → Set where
 	only with respect to it. Furthermore it provides an additional constructor
 	for conflicts. 
 
+        \subsection{Diff₃ Algorithm}
+        \label{subsec:diff3-algo}
+
 	The merge operator for edit scripts takes two aligned edit scripts and
 	applies the merge operator \texttt{⊔} previously defined to
 	each pair of aligned edits. It builds a merged edit script choosing a 
@@ -809,7 +822,7 @@ e₃ : ES₃ []
 e₃ = [Ins [], Ins []]
 \end{minted}
         The problem is that the first insert produces a constructor that does not take any arguments,
-        yet the tail of the script gives another empty list as argument.        
+        yet the tail of the script yields another empty list as argument.        
         
         The merged edit script must be first type-checked in order to retrieve the merged \emph{target} object.
 	The typing judgment \texttt{e ⇓ as} states that the edit script \texttt{e} 
@@ -860,6 +873,7 @@ data Merged₃ : ES xs ys → ES xs zs → ES xs ws → Set where
 \end{minted}
 
 \section{Properties}
+\label{sec:properties}
 In this section we present several properties of our merge algorithm 
 that have been formally studied using the model presented in this paper.
 
@@ -1043,7 +1057,7 @@ data Maximal : ES xs ys → ES xs zs → ES xs ws → Set where
     It is fine to ignore them because they don't perform any \emph{change}.
 
     Clearly the maximality triplet definition closely resembles the merging semantics discussed
-    in section \ref{merge-semantics}. We can easily show that the script resulting from
+    in section \ref{subsec:merge-semantics}. We can easily show that the script resulting from
     successfully merging two edit script is maximal.
 \begin{minted}{agda}
     Merged e₁ e₂ e₃    ⇒    Maximal e₁ e₂ e₃
