@@ -119,11 +119,12 @@ Version control systems (VCS) such as Git \cite{Git} and Mercurial \cite{Mercuri
 are used in the software industry, as well as in the open source community and by researchers all over the world in the software development process.
 These tools track all the changes made to software throughout its lifetime, making it possible to quickly roll back to any previous version. Furthermore developers can simultaneously work on the same project and use a VCS to merge their changes together.
 VCS provides these features by means of two algorithms, called \texttt{diff} and \texttt{diff3}.
-The first one detects changes in source code files and it is used to track their history, while the other merges independent changes made to the code base, allowing simultaneous development.
+The former detects changes in source code files and it is used to track their history, while the latter merges independent changes made to the code base, allowing simultaneous development.
 These algorithms are line-based, because they compare and manipulate files line by line and can be used not only on software artifacts, but with any text-based file. 
 Unfortunately their fixed-granularity limit their precision when detecting changes and deteriorate their merging capabilities. In this paper we develop a data-type generic version of the \texttt{diff} and \texttt{diff3} algorithms, that improve their precision and applicability.
 
 \paragraph{Example}
+We show the shortcomings of the line-based \texttt{diff} and \texttt{diff3} algorithms by means of an example.
 The Comma Separated Values file format (CSV) is a simple text-based encoding of data stored in tables \cite{csv}.
 In a CSV file every line represents a row of the table and in every row commas are used to separated values in different columns.
 For instance a $3 \times 3$ table containing numbers from 1 to 9 can
@@ -217,7 +218,7 @@ A conflict is instead triggered when the same line is different in all the three
 
 
 \paragraph{Discussion}
-The main limitation of \texttt{diff3} and \texttt{diff} is that they are  coarse-grained, because they operate on data representation with a fixed precision consisting in one line of text, therefore disregarding completely any information about the actual structure of the data.
+The main limitation of \texttt{diff3} and \texttt{diff} is that they are  coarse-grained, because they operate on data representation with a fixed precision consisting of one line of text, therefore disregarding completely any information about the actual structure of the data.
 If \texttt{diff} and \texttt{diff3} were aware of the table structure, consisting of columns and rows, then \texttt{diff} could exactly represent the differences in each version and \texttt{diff3} could automatically merge them, as the users expected:
 \begin{center}
 \begin{tabular}{| c | c | c | c |}
@@ -234,11 +235,11 @@ If \texttt{diff} and \texttt{diff3} were aware of the table structure, consistin
 \subsection{Contributions}
 In this paper we make the following contributions:
 \begin{itemize}
-\item In section \ref{subsec:edit-script} We define a type-safe edit script data 
+\item In section \ref{subsec:edit-script} we define a type-safe edit script data 
       type that supports \emph{delete}, \emph{insert} and \emph{update} edits and 
       that represents the differences between two objects. In section 
       \ref{subsec:diff-algo} we give the formal specifications of a \texttt{diff} 
-      algorithm in terms of the edit scrip data type.
+      algorithm in terms of the edit script data type.
 \item In section \ref{subsec:merge-semantics} we formalize the 
       \emph{three-way-merge} strategy and give a precise semantics of 
       \emph{mergeable} and \emph{conflicting} edits. We give 
@@ -335,15 +336,32 @@ hsplit : HList (as ++ bs) → HList as × HList bs
 	\subsection{Edit Operations}
 	Single edits are defined over values, which denote either the presence or 
 	the absence of a node.
+        At first we might try to define them as a maybe value:
+\begin{minted}{agda}
+Val : List Set -> Set -> Set
+Val as a = Maybe (F as a)
+\end{minted}
+        In the type \texttt{Val as a} the parameters \texttt{as} and \texttt{a} 
+        witness the possible presence of a node \texttt{F as a}, that given objects 
+        of types \texttt{as} will produce an object of type \texttt{a}.
+        The drawback of this encoding is that \texttt{as} and \texttt{a} are 
+        valid input and output approximations only if a node is in fact present.
+        An indexed data type on the other hand can give a much more accurate
+        approximation:
 \begin{minted}{agda}
 data Val : List Set → List Set → Set where
   ⊥ : Val [] []
   ⟨_⟩ : F as a → Val as [ a ] 
 \end{minted}
-	Values are indexed by two lists that are used to stack edits in a type 
-	safe fashion and that contain respectively the types of the fields of a node 
-	and its resulting type.
-	Since empty values do not store any node their lists are both empty.
+        The data type \texttt{Val as bs} is indexed by two lists \texttt{as} and 
+        \texttt{bs} that assume only certain values, depending on the presence
+        of a node. This definition ensures that for any value \texttt{Val as bs}, 
+        the lists \texttt{as} and \texttt{bs} always accurately approximate inputs 
+        and outputs regardless of the presence of a node.
+	In particular an empty value will consume no input and produce nothing, hence
+        both lists are empty.
+        A non-empty value contains a node \texttt{F as a} which consumes 
+        objects of types \texttt{as} and produces a single object of type \texttt{a}.
 
 	The set of edit operations considered includes a no-operation, node 
 	deletion, insertion and update.
@@ -384,7 +402,25 @@ data ES : List Set → List Set → Set where
 	An edit script of type \texttt{ES xs ys} transforms
 	a \emph{source} object of type \texttt{HList xs} into
 	a \emph{target} object of type \texttt{HList ys}. 
-	The following function retrieves the source object from an edit script:			
+        The indexes of the edit script are used as stacks by respectively the 
+        \emph{source} and \emph{target} values of each edit contained in the script.
+        This encoding is type-safe because the input list of the \emph{source} and 
+        \emph{target} values are present on top of respectively the input and output 
+        stack of the remaining script and their output lists are 
+        found on top of the stacks of the resulting script.
+
+        \paragraph{Example}
+        The following edit script encodes the differences between \texttt{[1,2,3]} 
+        and \texttt{[\textcolor{blue}{0},1,2,3]}, the first rows of the tables 
+        from the introduction:
+
+\begin{Verbatim}[commandchars=\\\{\}]
+e : ES [List Int] [List Int]
+e = [\textcolor{blue}{Ins (::)} , \textcolor{blue}{Ins 0}, Upd (::) (::), Upd 1 1 ... Upd [] []]
+\end{Verbatim}
+
+	The following function retrieves the source object from an edit 
+        script:			
 \begin{minted}{agda}
 ⟪_⟫ : ES as bs → HList as
 ⟪ [] ⟫ = []
@@ -453,11 +489,11 @@ Diff⇐ : (e : ES xs ys) → Diff ⟪ e ⟫ ⟦ e ⟧ e
 Diff⇒ : Diff x y e → x ≡ ⟪ e ⟫  ×  y ≡ ⟦ e ⟧
 \end{minted}
 
-        \todo{Should I expand on the diff algorithm?}
 	In our implementation the \texttt{diff} algorithm employed is a 
-        generalization of that proposed by Lempsink et al.\ \cite{Lemp09} and 
-        therefore we will not discuss it any further. \
-        We only remark that in our model we have proved that it 
+        generalization of that proposed by Lempsink et al.\ \cite{Lemp09},
+        which will be discussed in section \href{sec:related-work}.
+        
+        We remark that we have proved that it 
 	complies with the \texttt{Diff} specification:
 \begin{minted} {agda}
 diff-suff :  (x : HList xs) (y : HList ys) → Diff x y (diff x y)
@@ -874,8 +910,8 @@ data Merged₃ : ES xs ys → ES xs zs → ES xs ws → Set where
 
 \section{Properties}
 \label{sec:properties}
-In this section we present several properties of our merge algorithm 
-that have been formally studied using the model presented in this paper.
+In this section we present several properties of our merge algorithm, all of which 
+have been verified with the Agda proof assistant using the model presented in this paper.
 
     \subsection{Conflict}  
     In order to reason about complex merge operations we have studied what are the 
@@ -1250,6 +1286,7 @@ data _↤_⊏_ (e : ES xs ys) (α : F as a) (β : F bs b) : Set where
     for edits of the second script. 
 
 \section{Discussion and Related Work}
+\label{sec:related-work}
 
 \appendix
 \section{Appendix Title}
