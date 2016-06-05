@@ -116,8 +116,8 @@ keyword1, keyword2
 
 \section{Introduction}
 Version control systems (VCS) such as Git \cite{Git} and Mercurial \cite{Mercurial}
-are used in the software industry, as well as in the open source community and by researchers all over the world in the software development process.
-These tools track all the changes made to software throughout its lifetime, making it possible to quickly roll back to any previous version. Furthermore developers can simultaneously work on the same project and use a VCS to merge their changes together.
+are used in the software industry, as well as in the open source community and by researchers all over the world to develop software.
+These tools track all the changes in the source code throughout its development, making it possible to quickly roll back to any previous version. Furthermore developers can simultaneously work on the same project and use a VCS to merge their changes together.
 VCS provides these features by means of two algorithms, called \texttt{diff} and \texttt{diff3}.
 The former detects changes in source code files and it is used to track their history, while the latter merges independent changes made to the code base, allowing simultaneous development.
 These algorithms are line-based, because they compare and manipulate files line by line and can be used not only on software artifacts, but with any text-based file. 
@@ -126,9 +126,8 @@ Unfortunately their fixed-granularity limit their precision when detecting chang
 \paragraph{Example}
 We show the shortcomings of the line-based \texttt{diff} and \texttt{diff3} algorithms by means of an example.
 The Comma Separated Values file format (CSV) is a simple text-based encoding of data stored in tables \cite{csv}.
-In a CSV file every line represents a row of the table and in every row commas are used to separated values in different columns.
-For instance a $3 \times 3$ table containing numbers from 1 to 9 can
-is encoded in the file \texttt{a.csv} as follows:
+In a CSV file every line represents a row of the table and within each row commas separate values in different columns.
+For instance the file \texttt{a.csv} encodes a $3 \times 3$ table containing numbers from 1 to 9.
 \begin{figure}[!h]
 \centering
 \begin{minipage}{.25\textwidth}
@@ -213,7 +212,7 @@ In particular \texttt{diff3} employs the \emph{three-way-merge} technique to com
 \texttt{\textcolor{blue}{0},7,8,9} & \texttt{7,8,9} & \texttt{7,8,\textcolor{magenta}{15}} & \textcolor{red}{✗} \\ \hline
 \end{tabular}
 \end{center}
-A merge is possible when there is at most one different version for the same line, as it happens in the first row.
+A merge is possible when there is at most one different version of the same line, as it happens in the first row.
 A conflict is instead triggered when the same line is different in all the three versions, which is the case in the second and third row.
 
 
@@ -377,16 +376,16 @@ data _⇝_ : Val as bs → Val cs ds → Set where
 	a no-operation that is used exclusively to \emph{align} edit scripts,
 	therefore it maps the empty value into itself.
 	The edit \texttt{Del α} deletes the node \texttt{α} from the source object, 
-	thus it is mapped into \texttt{⊥}. Conversely the edit \texttt{Ins α} 
-	inserts the node \texttt{α} in the target object and therefore its source value 
+	thus it is mapped to \texttt{⊥}. Conversely the edit \texttt{Ins α} 
+	inserts node \texttt{α} in the target object and therefore its source value 
 	is 	\texttt{⊥}.
-	Lastly \texttt{Upd α β} denotes the update of the source node \texttt{α}
-	to the target node \texttt{β}, which concretely represents a 
+	Lastly \texttt{Upd α β} denotes the update of source node \texttt{α}
+	to target node \texttt{β}, which concretely represents a 
 	constructor change. 
-	Note that there is not a distinct copy edit, which is instead encoded as a 
-	special	update, in which the source and target nodes are the same.
+	Note that there is no explicit copy edit: it is just a special case 
+	of update, in which the source and target nodes happen to be the same.
 	Edits whose source and target values are identical are 
-	called \emph{identity} edits. Copies and no-operations fall into this
+	called \emph{identity} edits. Copy and no-operation fall into this
 	category.
 	
 	\subsection{Edit Script}
@@ -411,7 +410,7 @@ data ES : List Set → List Set → Set where
 
         \paragraph{Example}
         The following edit script encodes the differences between \texttt{[1,2,3]} 
-        and \texttt{[\textcolor{blue}{0},1,2,3]}, the first rows of the tables 
+        and \texttt{[\textcolor{blue}{0},1,2,3]}, the first row of the tables 
         from the introduction:
 
 \begin{Verbatim}[commandchars=\\\{\}]
@@ -539,12 +538,12 @@ data _⋎_ : ES as bs → ES as cs → Set where
 	The definition is recursive: two edit scripts are aligned if either  
         they are both empty or their heads and their tails are both aligned.
 	Note that we do not need an auxiliary data type to encode edit 
-	alignment since this property can be expressed directly in signatures.
+	alignment since this property can be enforced directly with their types.
 	For example the \texttt{cons} constructor accepts only aligned edits
 	because it requires them to have the same source value \texttt{u}.
 	
         Intuitively two edit scripts that have the same \emph{source} object
-        can be aligned, because they share the same set of \emph{source} nodes.
+        can be aligned, because they share the same collection of \emph{source} nodes.
         However the scripts might be unaligned because of insert edits occurring
         at different points. 
 
@@ -555,7 +554,7 @@ data _⋎_ : ES as bs → ES as cs → Set where
 
 \begin{minted}{agda}
 e₁ e₂ : ES [ List Int ] [ List Int ]
-e₁ = [Ins  (::), Ins  1, Cpy (::), Cpy 1, Cpy []]
+e₁ = [Ins  (::), Ins  0, Cpy (::), Cpy 1, Cpy []]
 e₂ = [Cpy (::), Cpy 1, Ins  (::), Ins  2, Cpy []] 
 \end{minted}       
 
@@ -571,17 +570,17 @@ e₂ = [Cpy (::), Cpy 1, Ins  (::), Ins  2, Cpy []]
         Interestingly alignment can be recovered by inserting no-operation edits in 
         these points. 
 \begin{minted}{agda}
-e₁* = [Ins (::), Ins 1, Cpy (::), Cpy 1, Nop   , Nop , Cpy []]
+e₁* = [Ins (::), Ins 0, Cpy (::), Cpy 1, Nop   , Nop , Cpy []]
 e₂* = [Nop   , Nop , Cpy (::), Cpy 1, Ins (::), Ins 2, Cpy []] 
 \end{minted}
-        The relation \texttt{e₁ ⊴ e₂} denotes that the edit script \texttt{e₂}
-        extends \texttt{e₁} with a finite number of \texttt{Nop} edits.
+        The relation \texttt{e ⊴ e*} denotes that the edit script \texttt{e*}
+        extends \texttt{e} with a finite number of \texttt{Nop} edits.
         Note that the \texttt{Nop} edit change neither the \emph{source} nor 
         the \emph{target} of the edit script, therefore it is an harmless 
         extension.
         
 \begin{minted}{agda}
-      e₁ ⊴ e₂     ⇒     ⟦ e₁ ⟧ ≡ ⟦ e₂ ⟧    ×    ⟪ e₁ ⟫ ≡ ⟪ e₂ ⟫ 
+      e ⊴ e*     ⇒     ⟦ e ⟧ ≡ ⟦ e* ⟧    ×    ⟪ e ⟫ ≡ ⟪ e* ⟫ 
 \end{minted}
 
         No-operations are automatically aligned with inserts because
@@ -594,7 +593,7 @@ e₂* = [Nop   , Nop , Cpy (::), Cpy 1, Ins (::), Ins 2, Cpy []]
         if they admit extensions that are \emph{aligned}:
 \begin{minted}{agda}
 data _~_ (e₁ : ES xs ys) (e₂ : ES xs zs) : Set where
-  WA : e₁ ⊴ e₁' → e₂ ⊴ e₂' → e₁' ⋎ e₂' → e₁ ~ e₂
+  WA : e₁ ⊴ e₁* → e₂ ⊴ e₂* → e₁* ⋎ e₂* → e₁ ~ e₂
 \end{minted}
 
         We can now weakly align two edit scripts, that share the
@@ -625,22 +624,20 @@ data _⊔_↧_ : (v ⇝ a) → (v ⇝ b) → (v ⇝ c) → Set where
   Idem : (f : v ⇝ w) → f ⊔ f ↧ f
 \end{minted}
 
-	Note that the data type definition already constraints the input edits to
-	be aligned, because both have the same source \texttt{v}.
+	Observe that the type of the two input edits guarantees their alignment.
 	Furthermore merging determines only the \emph{target} value,
 	hence also the merged edit share the same source value.
 
-	Each constructor represents a distinct axiom that explains why
+	Each constructor represents a distinct axiom that justifies why
 	the merge is possible and determines the merged edit.
 	The rules \texttt{Id₁} and \texttt{Id₂} apply when 
 	respectively the first and the second transformation is an \emph{identity} 
         edit.
-	Accordingly to the three-way merge algorithm, when the source node
-	is unchanged in one edit, the other edit is chosen.
+	Similarly to the three-way merge algorithm, when one version is unchanged the other
+        is chosen.
 	The fact that merging is an \emph{idempotent} operation motivates the 
 	third rule \texttt{Idem}.
-	It accounts especially for false-positive conflicts and applies 
-	when the same edit is performed independently.
+	It applies when the same edit is performed independently in both versions.
 	
 	Note that this definition is particularly effective because it is 
 	minimal and concise, as it does not mention specific
@@ -649,7 +646,7 @@ data _⊔_↧_ : (v ⇝ a) → (v ⇝ b) → (v ⇝ c) → Set where
 
 	\paragraph{Conflict}
 	A conflict occurs when two edits perform irreconcilable changes.
-	The following data type denotes the set of conflicts that may arise
+	The following data type represents the possible conflicts that may arise
 	from aligned edits.
 	
 \begin{minted}{agda}
@@ -661,16 +658,19 @@ data Conflict : Val as bs → Val cs ds → Val es fs → Set where
              Conflict ⟨ α ⟩ ⟨ β ⟩ ⟨ γ ⟩    
 \end{minted}
 
-	The data type is indexed by three values which represents respectively
-	the common source value and the target value of the first and second
-	edit.	Conflicts given by \texttt{InsIns} and \texttt{UpdUpd}	 correspond to 
-	conflicting insertions and updates which resemble to some extent the
-	conflicts in the original GNU \texttt{diff3}. Those given by \texttt{UpdDel} 
-	and \texttt{DelUpd} are entirely new and stem from the fact that these two
-	edits are in general irreconcilable.
+	In the type \texttt{Conflict u v w} the index \texttt{u} is
+        the common source value, while indexes \texttt{v} and
+        \texttt{w} are the target values of respectively the first and
+        second edit.  Conflicts given by \texttt{InsIns} and
+        \texttt{UpdUpd} correspond to conflicting insertions and
+        updates which corresponds to the conflicts of line-based
+        \texttt{diff3}.  Those given by \texttt{UpdDel} and
+        \texttt{DelUpd} are entirely new and stem from the fact that
+        these two edits are in general irreconcilable.
 
-	A conflict is the result of an unsuccessful merge, which is denoted
-	by the data type \texttt{f ⊔ g ↥ c}.
+	The data type \texttt{f ⊔ g ↥ c} denotes that the edits
+        \texttt{f} and \texttt{g} cannot be merged and raise conflict
+        \texttt{c}.
 
 \begin{minted}{agda}
 data _⊔_↥_ : (u ⇝ v) → (u ⇝ w) → Conflict u v w → Set where
@@ -776,22 +776,23 @@ merge₃ (cons f g p) with f ⊔ g
 merge₃ (cons f g p) | inj₁ (c , _) = c ∷ᶜ merge₃ p
 merge₃ (cons f g p) | inj₂ (h , _) = h ∷  merge₃ p
 \end{minted}
-	To improve readability the following entry point is defined:
+	To improve readability we will use the following infix
+        operator:
 \begin{minted}{agda}
 _⊔₃_ (e₁ : ES as bs) (e₂ : ES as cs) {{p : e₁ ⋎ e₂} → ES₃ as
 _⊔₃_  _ _ {{p}} = merge₃ p
 \end{minted}
-	The alignment proof is passed as an instance argument, i.e. a special type 
-	of implicit arguments that is automatically resolved at call-sites 
-	\cite{Devriese11}.
+	The alignment proof is passed  as an instance argument, i.e. a
+        special  type  of  implicit arguments  that  is  automatically
+        resolved at call-sites \cite{Devriese11}.
 
-        In order to reason about merging we encode the specifications of
-        the merge operator in the \texttt{Merge₃} data type, shown in Fig
-        \ref{fig:merge3}.
-        \todo{This was called Diff3 in the thesis, but I think Merge3 is more 
-          appropriate because it is a reification of the function merge3}
+        In order to reason about merging we encode the specifications
+        of the merge operator in the \texttt{Merge₃} data type, shown
+        in Fig \ref{fig:merge3}.  \todo{This was called Diff3 in the
+          thesis, but I think Merge3 is more appropriate because it is
+          a reification of the function merge3}
 
-\begin{figure*}[ht]
+\begin{figure*}[t!]
 \centering
 \begin{minted}{agda}
 data Merge₃ : ES xs ys → Es xs zs → ES₃ xs → Set where
@@ -814,7 +815,7 @@ data Merge₃ : ES xs ys → Es xs zs → ES₃ xs → Set where
 \end{minted}
         The proof is also by induction and requires three important properties of
         the merging and conflict semantics.
-        Firstly they must be mutually exlusive, i.e\ given
+        Firstly they must be mutually exlusive, i.e.\ given
         two aligned edits \texttt{f} and \texttt{g} either they can be merged by
         some edit \texttt{h} (\texttt{f ⊔ g ↧ h}), or they trigger some conflict
         \texttt{c} (\texttt{f ⊔ g ↥ c}). Secondly these relations must be deterministic, i.e.\
@@ -833,37 +834,44 @@ diff₃ y x z with align (diff-suff x y) (diff-suff x z)
 diff₃ y x z | WA _ _ p = merge₃ p
 \end{minted}
 	
-	The \texttt{diff} algorithm is called implicitly by \texttt{diff-suf}; the
-	edit scripts so obtained are aligned via extension using 
-	\texttt{align}, from which the alignment proof \texttt{p} is extracted
-	and used to finally merge the scripts with \texttt{merge₃}.
-	Note that the call to \texttt{align} is valid because \texttt{diff-suff}
-	is invoked with the same \texttt{x} as first argument.
+	The \texttt{diff} algorithm is called implicitly by
+        \texttt{diff-suf}; the edit scripts so obtained are aligned
+        via extension using \texttt{align}, from which the alignment
+        proof \texttt{p} is extracted and used to finally merge the
+        scripts with \texttt{merge₃}.  Note that the call to
+        \texttt{align} is valid because \texttt{diff-suff} is invoked
+        with the same \texttt{x} as first argument.
 
         \paragraph{Type Checking}
-	Even though merging might succeed without triggering any conflic the
-        merged edit script might be invalid, i.e. it will not produce a well-typed
-        object as \emph{target}. The reason is that the merge operator \texttt{⊔₃} 
-        merges edits \emph{pointwise}, therefore the script obtained by joining two
-        well-typed edit script may not be well-typed.
-        Consider for instance the following edit scripts:
+	Even though merging might succeed without triggering any
+        conflic the merged edit script might be invalid, i.e. it will
+        not produce a well-typed object as \emph{target}.
+        %
+        The reason is that the merge operator \texttt{⊔₃} merges edits
+        \emph{pointwise}, therefore the script obtained by joining two
+        well-typed edit script may not be well-typed.  Consider for
+        instance the following edit scripts:
 \begin{minted}{agda}
 e₁ e₂ : ES [] [List Int]
 e₁ = [Ins [], Nop]
 e₂ = [Nop, Ins []]
 \end{minted}
-        Merging the two edits with \texttt{e₁ ⊔₃ e₂} yields a conflict free, yet ill-typed edit script
+        Merging the two edits with \texttt{e₁ ⊔₃ e₂} yields a conflict
+        free, yet ill-typed edit script:
 \begin{minted}{agda}
 e₃ : ES₃ []
 e₃ = [Ins [], Ins []]
 \end{minted}
-        The problem is that the first insert produces a constructor that does not take any arguments,
-        yet the tail of the script yields another empty list as argument.        
+        The problem is that the first insert produces a constructor
+        that does not take any arguments, yet the tail of the script
+        yields another empty list as argument.
         
-        The merged edit script must be first type-checked in order to retrieve the merged \emph{target} object.
-	The typing judgment \texttt{e ⇓ as} states that the edit script \texttt{e} 
-	is well typed and produces a list of type \texttt{HList as}.
-	The typing rules are straightforward:
+        The merged edit script must be type-checked to ensure that it
+        actually produces a well-typed merged \emph{target} object.
+        %
+	The typing judgment \texttt{e ⇓ as} states that the edit
+        script \texttt{e} is well typed and produces a list of type
+        \texttt{HList as}.  The typing rules are straightforward:
 	
 	\begin{center}	
 		\mbox{	
@@ -911,7 +919,7 @@ data Merged₃ : ES xs ys → ES xs zs → ES xs ws → Set where
 \section{Properties}
 \label{sec:properties}
 In this section we present several properties of our merge algorithm, all of which 
-have been verified with the Agda proof assistant using the model presented in this paper.
+have been verified in Agda using the model presented in this paper.
 
     \subsection{Conflict}  
     In order to reason about complex merge operations we have studied what are the 
@@ -933,7 +941,7 @@ data _,_↥_ : ES xs ys -> ES xs zs -> Conflict u v w -> Set where
     conflict. 
 
 \begin{minted}{agda}
-data _∈ᶜ_ (c : Conflict u v w) : ES₃ xs -> Set₁0 where
+data _∈ᶜ_ (c : Conflict u v w) : ES₃ xs -> Set where
   here : c ∈ᶜ (c ∷ᶜ e)
   there : c ∈ᶜ e -> c ∈ᶜ f ∷ e
   thereᶜ : c ∈ᶜ e -> c ∈ᶜ (c' ∷ᶜ e)
