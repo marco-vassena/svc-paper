@@ -581,20 +581,23 @@ e₂ = [Cpy (::), Cpy 1, Ins  (::), Ins  2, Cpy []]
 e₁* = [Ins (::), Ins 0, Cpy (::), Cpy 1, Nop   , Nop , Cpy []]
 e₂* = [Nop   , Nop , Cpy (::), Cpy 1, Ins (::), Ins 2, Cpy []] 
 \end{minted}
-        The relation \texttt{e ⊴ e*} denotes that the edit script \texttt{e*}
-        extends \texttt{e} with a finite number of \texttt{Nop} edits.
-        Note that the \texttt{Nop} edit change neither the \emph{source} nor 
-        the \emph{target} of the edit script, therefore it is an harmless 
-        extension.
-        
-\begin{minted}{agda}
-      e ⊴ e*     ⇒     ⟦ e ⟧ ≡ ⟦ e* ⟧    ×    ⟪ e ⟫ ≡ ⟪ e* ⟫ 
-\end{minted}
+        The relation \texttt{e ⊴ e*} denotes that the edit script
+        \texttt{e*} extends \texttt{e} with a finite number of
+        \texttt{Nop} edits.
 
-        No-operations are automatically aligned with inserts because
-        they both share the empty value \texttt{⊥} as \emph{source} and furthermore
-        they may not introduce spurious conflicts because they are \emph{identity}
-        edits.
+        Note that the \texttt{Nop} edit change neither the
+        \emph{source} nor the \emph{target} of the edit script,
+        therefore it is an harmless extension.
+        
+\begin{prop}[Equivalent Extension]
+Let \texttt{e} and \texttt{e*} be two edit scripts such that \texttt{e ⊴ e*}, then
+\texttt{⟦ e ⟧ ≡ ⟦ e* ⟧} and \texttt{ ⟪ e ⟫ ≡ ⟪ e* ⟫}
+\end{prop}
+
+No-operations are automatically aligned with inserts because they both
+share the empty value \texttt{⊥} as \emph{source} and furthermore they
+may not introduce spurious conflicts because they are \emph{identity}
+edits.
    
         \paragraph{Weak Alignment}
         Two edit scripts are \emph{weakly aligned} \texttt{e₁ \textasciitilde\ e₂} 
