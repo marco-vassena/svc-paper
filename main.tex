@@ -107,7 +107,36 @@
 \maketitle
 
 \begin{abstract}
-
+\todo{190 words: too long? Should I aim for 150-170?}
+  The UNIX \texttt{diff3} program automatically merges two the text
+  files, given a common base version, comparing them line by line and
+  raising conflicts when the changes are irreconcilable.
+  %
+  The program ignores the actual structure of the data stored in the
+  files, hence it generates spurious conflicts, that need to be
+  manually resolved.
+  %
+  In this paper we present a state-based, three-way, persistent,
+  data-type generic \texttt{diff3} algorithm whose increased precision
+  reduces the number of false conflicts raised and improves its
+  merging capabilities.
+  %
+  We have implemented the algorithm in Agda, a proof assistant with
+  dependent types, and developed a model to reason about diffing and
+  merging.
+  %
+  \todo{Too many details? More motivation?}
+  We have established that the algorithm fulfills its specification
+  and proved that it is correct with respect to some safety
+  properties.
+  %
+  Furthermore we have identified the minimal conditions under which
+  the merging algorithm raises a conflict and established a structural
+  invariant preserved.
+  %
+  We have implemented our algorithm in Haskell in order to make our results
+  practical and employed the latest type-system features to retain the
+  same level of type safety of full-blown dependent types.
 \end{abstract}
 
 \category{CR-number}{subcategory}{third-level}
@@ -136,41 +165,33 @@ In a CSV file every line represents a row of the table and within each row comma
 For instance the file \texttt{a.csv} encodes a $3 \times 3$ table containing numbers from 1 to 9.
 \begin{figure}[!h]
 \centering
-\begin{minipage}{.25\textwidth}
-  \centering
-  \begin{tabular}{ | c | c | c | }
-    \hline
-    1 & 2 & 3 \\ \hline
-    4 & 5 & 6 \\ \hline
-    7 & 8 & 9  \\ \hline
-  \end{tabular}
-\end{minipage}%
-\begin{minipage}{.25\textwidth}
-  \centering
+\begin{minipage}{.15\textwidth}
+{  \centering
   \begin{verbatim}
   $ cat a.csv
   1,2,3
   4,5,6
   7,8,9
-  \end{verbatim}
+  \end{verbatim}\par
+}
+\end{minipage}%
+\begin{minipage}{.15\textwidth}
+{  \centering
+  \begin{tabular}{ | c | c | c | }
+    \hline
+    1 & 2 & 3 \\ \hline
+    4 & 5 & 6 \\ \hline
+    7 & 8 & 9  \\ \hline
+  \end{tabular}\par
+}
 \end{minipage}%
 \end{figure}
 
-\newpage
 Imagine that two users are simultaneously working on this table.
 The first user adds a column filled with zero and saves the new table in \texttt{b.csv}:
 \begin{figure}[h]
 \centering
-\begin{minipage}{.25\textwidth}
-  \centering
-  \begin{tabular}{ | c | c | c | c | }
-    \hline
-    \textcolor{blue}{0} & 1 & 2 & 3 \\ \hline
-    \textcolor{blue}{0} & 4 & 5 & 6 \\ \hline
-    \textcolor{blue}{0} & 7 & 8 & 9  \\ \hline
-  \end{tabular}
-\end{minipage}%
-\begin{minipage}{.25\textwidth}
+\begin{minipage}{.15\textwidth}
   \centering
 \begin{Verbatim}[commandchars=\\\{\}]
   $ cat b.csv
@@ -179,21 +200,21 @@ The first user adds a column filled with zero and saves the new table in \texttt
   \textcolor{blue}{0},7,8,9
 \end{Verbatim}
 \end{minipage}%$
+\begin{minipage}{.15\textwidth}
+  \centering
+  \begin{tabular}{ | c | c | c | c | }
+    \hline
+    \textcolor{blue}{0} & 1 & 2 & 3 \\ \hline
+    \textcolor{blue}{0} & 4 & 5 & 6 \\ \hline
+    \textcolor{blue}{0} & 7 & 8 & 9  \\ \hline
+  \end{tabular}
+\end{minipage}%
 \end{figure} 
 
 The second user changes some values in the third column and saves the new table in  \texttt{c.csv}:
 \begin{figure}[h]
 \centering
-\begin{minipage}{.25\textwidth}
-  \centering
-  \begin{tabular}{ | c | c | c | }
-    \hline
-    1 & 2 & 3 \\ \hline
-    4 & 5 & \textcolor{magenta}{9} \\ \hline
-    7 & 8 & \textcolor{magenta}{15} \\ \hline
-  \end{tabular}
-\end{minipage}%
-\begin{minipage}{.25\textwidth}
+\begin{minipage}{.15\textwidth}
   \centering
   \begin{Verbatim}[commandchars=\\\{\}]
   $ cat c.csv
@@ -202,6 +223,15 @@ The second user changes some values in the third column and saves the new table 
   7,8,\textcolor{magenta}{15}
   \end{Verbatim}
 \end{minipage}% $
+\begin{minipage}{.15\textwidth}
+  \centering
+  \begin{tabular}{ | c | c | c | }
+    \hline
+    1 & 2 & 3 \\ \hline
+    4 & 5 & \textcolor{magenta}{9} \\ \hline
+    7 & 8 & \textcolor{magenta}{15} \\ \hline
+  \end{tabular}
+\end{minipage}%
 \end{figure}
 
 The two users would like to synchronize their work now and decide to use 
