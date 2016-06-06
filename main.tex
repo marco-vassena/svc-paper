@@ -62,7 +62,8 @@
 
 \usepackage{amsthm}
 \usepackage{amsmath}
- 
+\usepackage{mathpartir} % typing rules
+
 \theoremstyle{plain}
 \newtheorem{definition}{Definition}
 \newtheorem{thm}{Theorem}
@@ -946,22 +947,18 @@ e₃ = [Ins [], Ins []]
 	The typing judgment \texttt{e ⇓ as} states that the edit
         script \texttt{e} is well typed and produces a list of type
         \texttt{HList as}.  The typing rules are straightforward:
-	
-	\begin{center}	
-		\mbox{	
-				\AxiomC{}
-				\UnaryInfC{\texttt{[] ⇓ []}}			
-				\DisplayProof
-		}
-		\mbox{
-				\AxiomC{\texttt{f : v \textasciitilde> w}}
-				\AxiomC{\texttt{w : F cs ds}}
-				\AxiomC{\texttt{e ⇓ cs ++ ys}}
-				\TrinaryInfC{\texttt{f ∷ e ⇓ (ds ++ ys)}}
-				\DisplayProof
-		}
-	\end{center}
-	
+	\begin{mathpar}
+          \inferrule
+          {}
+          {\texttt{[] ⇓ []}}
+          \and
+          \inferrule
+          {\texttt{f : v \textasciitilde> w} \\ 
+           \texttt{w : F cs ds} \\
+           \texttt{e ⇓ cs ++ ys}}
+          {\texttt{f ∷ e ⇓ (ds ++ ys)}}
+        \end{mathpar}
+
 	A trivial inference algorithm can be easily deduced from the typing rules.
 	Moreover note that the conflict cons constructor (\texttt{∷ᶜ}) is not 
 	mentioned in the typing rules, therefore edit scripts containing
@@ -971,25 +968,6 @@ e₃ = [Ins [], Ins []]
 \begin{minted}{agda}
 ⌜_⌝  : (e : ES₃ xs) → {{q : e ⇓ ys}} → ES xs ys
 \end{minted}
-
-% I don't think that it is very useful to introduce this.
-%         Some of the properties we will present apply only to \emph{successful} 
-%         merges, i.e.\ those that did not trigger any conflict and that are 
-%         well-typed. When necessary we will use the following data type to restrict
-%         to those cases.
-
-% \todo{Better name? I don't have good alternatives SMerge₃ , WT-Merge₃}
-% \begin{minted}{agda}
-% data Merged₃ : ES xs ys → ES xs zs → ES xs ws → Set where  
-%   nil : Merged₃ [] [] []
-%   cons : f ⊔ g ↧ h → Merged₃ e₁ e₂ e₃ → Merged₃ (f ∷ e₁) (g ∷ e₂) (h ∷ e₃)
-% \end{minted}
-%         Note that the third index is a well-typed edit script.
-%         The following lemma ties the connection between \texttt{Merge₃} and 
-%         \texttt{Merged₃}:
-% \begin{minted}{agda}
-%          Merge₃ e₁ e₂ e₃  ,  e₃ ⇓ ws   ⇒   Merged₃ e₁ e₂ ⌜ e₃ ⌝
-% \end{minted}
 
 \section{Properties}
 \label{sec:properties}
