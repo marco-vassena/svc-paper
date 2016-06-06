@@ -68,7 +68,7 @@
 \newtheorem{thm}{Theorem}
 \newtheorem{prop}{Proposition}
 \newtheorem{cor}{Corollary}
-
+\newtheorem{req}{Requirement}
 
 \begin{document}
 
@@ -433,29 +433,36 @@ e = [\textcolor{blue}{Ins (::)} , \textcolor{blue}{Ins 0}, Upd (::) (::), Upd 1 
 ⟦_⟧ : ES as bs → HList bs
 \end{minted}
 
-	\subsection{Diff algorithm}
-        \label{subsec:diff-algo}
-	The \texttt{diff3} algorithm employs a \texttt{diff} algorithm
-        that has the following signature:
+\subsection{Diff Algorithm}
+\label{subsec:diff-algo}
+The \texttt{diff} algorithm detects differences between
+two objects and has the the following signature:
 \begin{minted}{agda}
 diff : HList as → HList bs → ES as bs
 \end{minted}
-        Nevertheless our formalization abstracts over the specific
-        algorithm used.
-        %
-        Any \texttt{diff} algorithm that satisfy the following
-        specifications, in which \texttt{≡} denotes propositional
-        equality, can be employed in \texttt{diff3}:
-\[ \texttt{e = diff x y} \qquad \Leftrightarrow \qquad \texttt{⟪ e ⟫ ≡ x} \quad \land \quad  \texttt{⟦ e ⟧ ≡ y} \]
-	This basic requirement demands that the edit script computed by 
-	\texttt{diff} precisely encodes a transformation from the source object 
-	\texttt{x} to the target object \texttt{y}.
-	The advantage of reasoning by such specification is that we are not bound
-	to a particular \texttt{diff} algorithm when studying the properties of 
-	\texttt{diff3}, so that arbitrary diffing techniques can be used.
-        The following data type serves to this purpose: \texttt{Diff x y e} is the 
-        proof that the edit script \texttt{e} is the result of diffing the lists 
-        \texttt{x} and \texttt{y}.
+Our model abstracts over the specific \texttt{diff} algorithm used:
+the results proved are valid for a class of diffing algorithms that
+satisfy some basic requirements.
+
+\begin{req}[\texttt{diff} specifications]
+  A \texttt{diff} algorithm is correct if and only if for any list
+  \texttt{x} and \texttt{y}
+  \center{\texttt{e = diff x y ⇔ ⟪ e ⟫ ≡ ∧ ⟦ e ⟧ ≡ y}}
+\end{req}
+%
+This correctness criterion demands that the edit script computed by
+\texttt{diff} transform exactly the source object \texttt{x} into the
+target object \texttt{y}.  (In the specifications \texttt{≡} denotes
+propositional equality.)
+%
+The advantage of reasoning by such specification is that we are not
+bound to a particular \texttt{diff} algorithm when studying the
+properties of \texttt{diff3}, so that arbitrary diffing techniques can
+be used.
+%
+The following data type serves to this purpose: \texttt{Diff x y e} is
+the proof that the edit script \texttt{e} is the result of diffing the
+lists \texttt{x} and \texttt{y}.
 \begin{minted}{agda}
 data Diff : HList xs → HList ys → ES xs ys → Set where
   End : Diff [] [] []
@@ -486,7 +493,7 @@ Diff⇐ : Diff x y e → x ≡ ⟪ e ⟫  ×  y ≡ ⟦ e ⟧
 diff-suff :  (x : HList xs) (y : HList ys) → Diff x y (diff x y)
 \end{minted}
 
-\section{Generic diff3}
+\section{Generic diff$_3$}
 	The \texttt{diff3} algorithm takes as input three objects, the original
 	version called \emph{base} and two new replicas, and it outputs an
 	edit script that combines the changes between them.
