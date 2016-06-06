@@ -738,13 +738,38 @@ data _⊔_↥_ : (u ⟿ v) → (u ⟿ w) → Conflict u v w → Set where
 	As a result also the semantics of conflict is minimal, but still complete
         because it can encode all the true conflicts.
 
-	\paragraph{Merge Operator}
-	The binary operator \texttt{⊔} merges 
-	two aligned edits. For every pair of edits \texttt{f} and \texttt{g}, 
-	it either finds a suitable edit \texttt{h} and provide
-	a proof that \texttt{f ⊔ g ↧ h}, or detects a conflict \texttt{c}, 
-	with a proof that \texttt{f ⊔ g ↥ c}.
+        \paragraph{Properties}
+        We now show some fundamental properties of our merge semantics that
+        will be handy in our formalization.
+        %
+        Firstly we prove that the semantics is sound, that is
+        merge and conflicts are mutually exclusive.
+        \begin{prop}[Mutually Exclusive]
+          Let \texttt{f}, \texttt{g}, \texttt{h} be aligned edits, such that
+          \texttt{f ⊔ g ↧ h} then there exists no conflict \texttt{c} such that
+          \texttt{f ⊔ g ↥ c}.
+        \end{prop}
+        Secondly we prove \emph{determinancy} of the semantics relations.
+        \begin{prop}[Determinancy]
+        Let \texttt{f}, \texttt{g}, \texttt{h₁}, \texttt{h₂} be
+        aligned edits, such that \texttt{f ⊔ g ↧ h₁} and \texttt{f ⊔ g
+          ↧ h₂}, then \texttt{h₁ ≡ h₂}.
+        %
+        Similarly let \texttt{c₁} and \texttt{c₂} be conflicts, such
+        that \texttt{f ⊔ g ↥ c₁} and \texttt{f ⊔ g ↥ c₂}, then
+        \texttt{c₁ ≡ c₂}.
+        \end{prop}
+        Now that we have established that our semantics is sensible we
+        lastly define a decision function that combines two edits.
 
+	\paragraph{Merge Operator}
+	The binary operator \texttt{⊔} merges two aligned edits.
+        % 
+        For every pair of edits \texttt{f} and \texttt{g}, it either
+        finds a suitable edit \texttt{h} and provide a proof that
+        \texttt{f ⊔ g ↧ h}, or detects a conflict \texttt{c}, with a
+        proof that \texttt{f ⊔ g ↥ c}.
+        
 \begin{minted}{agda}
 _⊔_ : (f : u ⟿ v) (g : u ⟿ w) →
         (∃ λ c → f ⊔ g ↥ c) ⊎ (∃ λ h → f ⊔ g ↧ h)
@@ -807,7 +832,7 @@ data ES₃ : List Set → Set where
 	only with respect to it. Furthermore it provides an additional constructor
 	for conflicts. 
 
-        \subsection{Diff₃ Algorithm}
+        \subsection{Diff$_3$ Algorithm}
         \label{subsec:diff3-algo}
 
 	The merge operator for edit scripts takes two aligned edit scripts and
