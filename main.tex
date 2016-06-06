@@ -864,20 +864,21 @@ _⊔₃_  _ _ {{p}} = merge₃ p
         resolved at call-sites \cite{Devriese11}.
 
         In order to reason about merging we encode the specifications
-        of the merge operator in the \texttt{Merge₃} data type, shown
-        in Fig \ref{fig:merge3}.
+        of the merge operator in data type \texttt{Merge₃}:
 
-\begin{figure*}[t!]
-\centering
+% \begin{figure*}[t!]
+% \centering
 \begin{minted}{agda}
 data Merge₃ : ES xs ys → Es xs zs → ES₃ xs → Set where
   nil : Merge₃ [] [] []
-  merge : f ⊔ g ↧ h → Merge₃ e₁ e₂ e₃ → Merge₃ (f ∷ e₁) (g ∷ e₂) (h ∷ e₃)
-  conflict : f ⊔ g ↥ c → Merge₃ e₁ e₂ e₃ → Merge₃ (f ∷ e₁) (g ∷ e₂) (c ∷ᶜ e₃)
+  merge : f ⊔ g ↧ h → Merge₃ e₁ e₂ e₃ → 
+                   Merge₃ (f ∷ e₁) (g ∷ e₂) (h ∷ e₃)
+  conflict : f ⊔ g ↥ c → Merge₃ e₁ e₂ e₃ → 
+                    Merge₃ (f ∷ e₁) (g ∷ e₂) (c ∷ᶜ e₃)
 \end{minted}
-\caption{Merge operator specification}
-\label{fig:merge3}
-\end{figure*}
+% \caption{Merge operator specification}
+% \label{fig:merge3}
+% \end{figure*}
 
         We now prove that our merge operator fulfills its requirements.
 \begin{prop}[\texttt{⊔₃} is correct]
