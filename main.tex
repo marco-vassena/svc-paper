@@ -137,6 +137,7 @@
   We have implemented our algorithm in Haskell in order to make our results
   practical and employed the latest type-system features to retain the
   same level of type safety of full-blown dependent types.
+  \todo{Abstract Conclusion?}
 \end{abstract}
 
 \category{CR-number}{subcategory}{third-level}
@@ -283,6 +284,7 @@ In this paper we make the following contributions:
 \item In section \ref{subsec:diff3-algo} we show a data-type generic, three-way 
       \texttt{diff3} algorithm that satisfy our specifications and we study its 
       formal properties in section \ref{sec:properties}.
+\todo{Haskell implementation?}
 \end{itemize}
 We have implemented these algorithms using generic programming techniques in Agda \cite{agda}, a programming language with dependent types and a proof assistant. 
 Dependent types are particularly convenient in this setting to idiomatically encode the pre-conditions and post-conditions of our algorithms and ultimately verify their properties.
@@ -475,6 +477,7 @@ the results proved are valid for a class of diffing algorithms that
 satisfy some basic requirements.
 
 \begin{req}[\texttt{diff} specifications]
+  \label{req:diff-specs}
   A \texttt{diff} algorithm is correct if and only if for any list
   \texttt{x} and \texttt{y}
   \center{\texttt{e = diff x y ⇔ ⟪ e ⟫ ≡ ∧ ⟦ e ⟧ ≡ y}}
@@ -491,7 +494,7 @@ properties of \texttt{diff3}, so that arbitrary diffing techniques can
 be used.
 %
 The following data type serves to this purpose: \texttt{Diff x y e} is
-the proof that the edit script \texttt{e} is the result of diffing the
+the proof that the edit script \texttt{e} is the result of diffing
 lists \texttt{x} and \texttt{y}.
 \begin{minted}{agda}
 data Diff : HList xs → HList ys → ES xs ys → Set where
@@ -502,21 +505,20 @@ data Diff : HList xs → HList ys → ES xs ys → Set where
   Upd : Diff (x₁ +++ x₂) (y₁ +++ y₂) e → 
         Diff (Node α x₁ ∷ x₂) (Node β y₁ ∷ y₂) (Upd α β ∷ e)
 \end{minted}
-        This specification  is a safe approximation of a \texttt{diff} algorithm,
-        because for any edit script the two input lists do correspond to its
-        source and target object.
-\begin{minted}{agda}
-Diff⇒ : (e : ES xs ys) → Diff ⟪ e ⟫ ⟦ e ⟧ e
-\end{minted}
-        Furthermore also the converse implication holds:
-\begin{minted}{agda}
-Diff⇐ : Diff x y e → x ≡ ⟪ e ⟫  ×  y ≡ ⟦ e ⟧
-\end{minted}
+
+We prove that \texttt{Diff x y e} complies with the specifications of
+\texttt{diff} (Requirement \ref{req:diff-specs}), because \texttt{x}
+and \texttt{y} are uniquely determined by respectively the source and
+target function applied on \texttt{e}, as the following result shows.
+\begin{prop}[\texttt{Diff} is correct]
+\label{prop:diff-correct}
+Let \texttt{x} and \texttt{y} be heterogeneous lists and \texttt{e} an edit script, then
+\center{\texttt{Diff x y e ⇔ x ≡ ⟪ e ⟫ ∧ y ≡ ⟦ e ⟧}}
+\end{prop}
 
 	In our implementation the \texttt{diff} algorithm employed is a 
         generalization of that proposed by Lempsink et al.\ \cite{Lemp09},
         which will be discussed in section \ref{sec:related-work}.
-        
         We remark that we have proved that it 
 	complies with the \texttt{Diff} specification:
 \begin{minted} {agda}
@@ -745,12 +747,14 @@ data _⊔_↥_ : (u ⟿ v) → (u ⟿ w) → Conflict u v w → Set where
         Firstly we prove that the semantics is sound, that is
         merge and conflicts are mutually exclusive.
         \begin{prop}[Mutually Exclusive]
+          \label{prop:mutually-exclusive}
           Let \texttt{f}, \texttt{g}, \texttt{h} be aligned edits, such that
           \texttt{f ⊔ g ↧ h} then there exists no conflict \texttt{c} such that
           \texttt{f ⊔ g ↥ c}.
         \end{prop}
         Secondly we prove \emph{determinancy} of the semantics relations.
         \begin{prop}[Determinancy]
+          \label{prop:determinancy}
         Let \texttt{f}, \texttt{g}, \texttt{h₁}, \texttt{h₂} be
         aligned edits, such that \texttt{f ⊔ g ↧ h₁} and \texttt{f ⊔ g
           ↧ h₂}, then \texttt{h₁ ≡ h₂}.
@@ -759,6 +763,7 @@ data _⊔_↥_ : (u ⟿ v) → (u ⟿ w) → Conflict u v w → Set where
         that \texttt{f ⊔ g ↥ c₁} and \texttt{f ⊔ g ↥ c₂}, then
         \texttt{c₁ ≡ c₂}.
         \end{prop}
+
         Now that we have established that our semantics is sensible we
         lastly define a decision function that combines two edits.
 
@@ -873,25 +878,18 @@ data Merge₃ : ES xs ys → Es xs zs → ES₃ xs → Set where
 \label{fig:merge3}
 \end{figure*}
 
-        We then show that our merge operator satisify its requirements:
-\begin{minted}{agda}
-Merge⇒ : e₁ ⋎ e₂ → Merge₃ e₁ e₂ (e₁ ⊔₃ e₂)
-\end{minted}
-        The proof follows by induction on \texttt{e₁ ⋎ e₂}. Since the opposite
-        proposition also holds, this data type fully describes the merge operator:
-\begin{minted}{agda}
-Merge⇐ : Merge₃ e₁ e₂ e₃ → e₃ ≡ e₁ ⊔₃ e₂
-\end{minted}
-        The proof is also by induction and requires three important
-        properties of the merging and conflict semantics.
-        %
-        Firstly they must be mutually exlusive, i.e.\ given two
-        aligned edits \texttt{f} and \texttt{g} either they can be
-        merged by some edit (\texttt{f ⊔ g ↧ h}), or they trigger some
-        conflict (\texttt{f ⊔ g ↥ c}). Secondly these relations must
-        be deterministic, i.e.\ the third index is uniquely determined
-        by the first two.
-        %
+        We now prove that our merge operator fulfills its requirements.
+\begin{prop}[\texttt{⊔₃} is correct]
+\label{prop:merge3-correct}
+Let \texttt{e₁}, \texttt{e₂} and \texttt{e₃} be edit scripts such that,
+\texttt{e₁ ⋎ e₂}, then:
+\center{\texttt{e₃ ≡ e₁ ⊔₃ e₂ ⇔ Merge₃ e₁ e₂ e₃}}
+\end{prop}
+\begin{proof}
+The if direction follows by induction on \texttt{e₁ ⋎ e₂}.
+The iff direction follows by induction on \texttt{Merge₃ e₁ e₂ e₃} and 
+relies on properties \ref{prop:mutually-exclusive} and \ref{prop:determinancy}.
+\end{proof}
         
         Now that we have shown that the merge operator is in a
         one-to-one relationship with the specification data type, we
@@ -1114,7 +1112,7 @@ node is correctly part of the source (target) object.
 %
 In other words the source function \texttt{⟪\_⟫} and target function
 \texttt{⟦\_⟧} do not forget any node.
-\begin{prop}[Source and Target Composition]
+\begin{prop}[\texttt{⟪\_⟫} and \texttt{⟦\_⟧} are correct]
 \label{prop:source-target-cmp}
 Given an edit script \texttt{e} and a node \texttt{α} then.
 If \texttt{e ⊢ₑ ⟨ α ⟩ ⟿ v} then \texttt{α ∈ ⟪ e ⟫}.
@@ -1130,8 +1128,9 @@ If \texttt{e ⊢ₑ ⟨ α ⟩ ⟿ v} then \texttt{α ∈ x}. Similarly if \text
 then \texttt{α ∈ y}.
 \end{cor}    
 \begin{proof}
-  It follows directly from the specification of \texttt{diff}
-  (\texttt{Diff⇐} and \texttt{Diff⇒}) and Proposition \ref{prop:source-target-cmp}.
+  It follows directly from Requirement \ref{req:diff-specs} and Proposition
+  \ref{prop:diff-correct} (requirements and specifications of
+  \texttt{diff}) and Proposition \ref{prop:source-target-cmp}.
 \end{proof}
 
 We now formally state the \emph{data retention} property.
@@ -1147,8 +1146,9 @@ We now formally state the \emph{data retention} property.
   \texttt{e ⊢ₑ v ⟿ ⟨ α ⟩}.
 \end{prop}
 \begin{proof}
-  It follows from the specifications of \texttt{diff} (\texttt{Diff⇐}
-  and \texttt{Diff⇒}) and by induction on \texttt{α ∈ x}.
+  It follows from Requirement \ref{req:diff-specs} and Proposition
+  \ref{prop:diff-correct} (requirements and specifications of
+  \texttt{diff}) and by induction on \texttt{α ∈ x}.
 \end{proof}
  
   We give now similar safety properties for our \texttt{diff₃} algorithm.
@@ -1164,8 +1164,8 @@ Let \texttt{e₁}, \texttt{e₂}, \texttt{e₃} be scripts such that
 If \texttt{f ∈ e₃} then either \texttt{f ∈ e₁} or \texttt{f ∈ e₂}.
 \end{prop}
 \begin{proof}
-  It follows directly from the specifications of \texttt{⊔₃}
-  (\texttt{Merge⇒}) and by induction.
+  It follows directly from Property \ref{prop:merge3-correct}
+  (correctness of \texttt{⊔₃}) and by induction.
 \end{proof}
 
   We now formally state and prove that our merge algorithm is \emph{persistent}.
@@ -1195,10 +1195,11 @@ Then either \texttt{f ∈ e₃} or there is a conflict \texttt{c} such that
 \texttt{e₁ ⊔₃ e₂ ↑ c}.
 \end{thm}
 \begin{proof}
-    The proof is by induction on \texttt{Merge₃ e₁ e₂ e₃} (from
-    \texttt{Merge⇒}) and \texttt{f ∈ₑ e₁}.  In the base case edit
-    \texttt{f} is merged with some other edit \texttt{g}, then either
-    \texttt{f ⊔ g ↥ c} or \texttt{f ⊔ g ↧ h}.
+  The proof is by induction on \texttt{Merge₃ e₁ e₂ e₃} (from Property
+  \ref{prop:merge3-correct}) and \texttt{f ∈ₑ e₁}.
+    % 
+    In the base case edit \texttt{f} is merged with some other edit
+    \texttt{g}, then either \texttt{f ⊔ g ↥ c} or \texttt{f ⊔ g ↧ h}.
     %
     In the former case we are done because \texttt{f} raises a
     conflict.  In the latter case we proceed by case analysis on
@@ -1327,10 +1328,15 @@ Then there are edits \texttt{f : u ⟿ ⟨ α ⟩} and \texttt{g : v ⟿ ⟨ β 
 such that \texttt{e ⊢ f ⊏ g}.
 \end{prop}
 \begin{proof}
-  The proof relies on the specification of \texttt{diff} (Diff⇒).
+  The proof relies on Requirement \ref{req:diff-specs} and Proposition
+  \ref{prop:diff-correct} (requirements and specifications of
+  \texttt{diff}).
+  %
   By induction on \texttt{y ⊢ α ⊏ β} we locate \texttt{f : u ⟿ ⟨ α ⟩}
-  in \texttt{e}. By Proposition \ref{prop:data-retention} it follows that
-  there exists \texttt{g : v ⟿ ⟨ β ⟩} in the tail of \texttt{e}.
+  in \texttt{e}. 
+  %
+  By Proposition \ref{prop:data-retention} it follows that there
+  exists \texttt{g : v ⟿ ⟨ β ⟩} in the tail of \texttt{e}.
 \end{proof}
 We again omit the corresponding property for \emph{source} nodes and object.
 
@@ -1374,8 +1380,9 @@ script \texttt{e}, then one of the following holds:
   \texttt{e ⊢ ⟨ β ⟩ ⟿ ⟨ φ ⟩}.
   %
   By Proposition \ref{prop:order-preserving-target-fun} we deduce that
-  \texttt{⟦ e ⟧ ⊢ γ ⊏ Φ} and by the specification of \texttt{diff}
-  (\texttt{Diff⇐}) it follows that \texttt{y ⊢ γ ⊏ Φ}.
+  \texttt{⟦ e ⟧ ⊢ γ ⊏ Φ} and by Requirement \ref{req:diff-specs} and
+  Proposition \ref{prop:diff-correct} (requirements and specifications
+  of \texttt{diff}) it follows that \texttt{y ⊢ γ ⊏ Φ}.
 \end{proof}
 
 We now generalize the \emph{order invariant} property to
