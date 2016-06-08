@@ -1399,17 +1399,17 @@ files, such as LaDiff \cite{Chawathe96}, MH-Diff \cite{Chawathe97} and
 comprehensive survey \cite{PetersSurvey}.
 %
 Other works address file and data synchronization, which raises
-problems similar to those addressed in this paper. Relevant examples
+problems similar to those discussed in this paper. Relevant examples
 include Unison, a file synchronizer \cite{Pierce98, UnisonSpec};
 Harmony, a synchronizer for heterogeneous data
 \cite{HarmonyOverview,Pierce07} and an algebra for file
 synchronization \cite{Ramsey01}.
 %
-Lastly some mergers address exclusively software artifacts
-\cite{Westfechtel91, Mens02, Apel11}.
+Lastly some mergers are tailored exclusively on software artifacts
+\cite{Westfechtel91, Mens02, Apel11}. 
 
 \paragraph{Ordered and Unordered Data} 
-The merge algorithm discussed in this paper works on algebraic data
+The merge algorithm presented in this paper works on algebraic data
 types, which are strongly typed, tree-like, ordered objects. File
 systems are usually hierarchical, but not inherently ordered, while
 XML trees can also be unordered.
@@ -1429,23 +1429,24 @@ This assumption is inappropriate in our context because data formats
 do not usually mark their content, furthermore even XML trees
 might not have identifiers in their nodes.
 	
-\paragraph{Alignment} 
+\paragraph{Alignment and Data Structures} 
 Alignment of corresponding parts plays a central role in when merging
 two objects. 
 %
 In this work the alignment is \emph{global} and mainly determined by
-\texttt{diff} \todo{Discuss this in the Haskell section?} which
-computes the embedding of the source into the target object, by
-minimizing an appropriate cost model.
+\texttt{diff} \todo{Discuss alignment and diff in the Haskell
+  section?} which computes the embedding of the source into the target
+object, by minimizing an appropriate cost model.
 %
-GNU \texttt{diff3} aligns lines of texts diving them in stable and
+GNU \texttt{diff3} aligns lines of texts dividing them in stable and
 unstable \emph{chunks} based on the longest common subsequences
-computed by \texttt{diff} \cite{PierceDiff3}.  Overlapping equal lines
-are matched and fused in stable chunks, leaving possibly conflicting
-chunks between them.
+computed by \texttt{diff} \cite{PierceDiff3}.  
 %
-This technique works well when lines are mostly unique such as
-in software artifacts.
+Overlapping equal lines are matched and fused in stable chunks,
+leaving possibly conflicting chunks between them.
+%
+This technique works well when lines are mostly unique such as in
+software artifacts.
 %
 We doubt that this technique would give good results in our context.
 %
@@ -1460,30 +1461,30 @@ the relative order of the nodes and strives to generate a proper
 embedding by matching pairs of nodes and preferring updates
 to a sequence of delete and insert.
 %
-On the other hand Harmony employs a \emph{local} strategy, that
-associates subtrees by name \cite{Pierce07}.
+The \emph{alignment} strategy has a profound impact when merging data
+structures.
 %
-Chawathe and Molina reduce the change detection problem to a problem
+Harmony employs a \emph{local} strategy, that associates subtrees by
+name, therefore it is able to merge correctly unordered collections
+such as records and sets.
+%
+Our algorithm struggle with unordered data structures, 
+because it will treat them as structured.
+%
+On the other hand Harmony performs poorly with lists, because
+it \emph{align} them by absolute position.
+%
+For example merging \texttt{[1, 3]} with \texttt{[2]} and base 
+\texttt{[1, 2]} surprisingly it gives \texttt{[2, 3]}, instead of
+\texttt{[3]} as we do.
+%
+Chawathe and Molina reduce the change detection problem to the problem
 of computing a minimum-cost edge cover of a bipartite graph
-\cite{Chawathe96}, since this problem is is NP-hard, they follow a set
-of pruning rules as an heuristic to find a \emph{minimal} edge cover.
-		
-\paragraph{Data Structures} Data structures are implemented as
-algebraic data types, that have always the form of structured ordered
-trees regardless of the fact that may represent unordered collections
-such as sets and records. Since the alignment strategy is strongly
-influenced by the actual shape of the trees, these class of objects
-will be badly matched and will be poorly merged, probably raising
-unnecessary conflicts.  Foster's synchronizer handles sets and records
-correctly, but just because their algorithm is schema-driven and
-internally handles schema keys as sets \cite{Pierce07}.  On the other
-hand it performs poorly for lists, because it naively aligns lists by
-\emph{absolute} positions, due to the local alignment strategy used.
-For example merging $o$ \texttt{= [Liz; Jo]}, $a$ \texttt{= [Jo]} and
-$b$ \texttt{= [Liz; Joanna]} surprisingly produces \texttt{[Jo;
-  Joanna]}, instead of \texttt{[Joanna]}, which is correctly reported
-by the merger presented here.
-	
+\cite{Chawathe96}.
+%
+Since this problem is NP-hard they employ an heuristic, consisting of
+pruning rules, to find a \emph{minimal} edge cover.
+			
 \paragraph{Edit operations} The set of edits considered in the change
 detection phase plays a fundamental role when merging changes.  The
 edits generated by GNU diff include only insert, delete and copy,
