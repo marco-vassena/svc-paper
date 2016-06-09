@@ -71,6 +71,9 @@
 \newtheorem{cor}{Corollary}
 \newtheorem{req}{Requirement}
 
+\AtBeginEnvironment{minted}{%
+  \renewcommand{\fcolorbox}[4][]{#4}}
+
 \begin{document}
 
 \special{papersize=8.5in,11in}
@@ -1389,6 +1392,306 @@ the original order in the merged script.
 
 \section{Haskell}
 \label{sec:haskell}
+In this section we implement our generic algorithm in Haskell.  The
+main reason to use Haskell over Agda is performance. 
+%
+Even though it does not feature full-fledged dependent types, the
+Glasgow Haskell Compiler (GHC) \cite{GHC}, the current
+state-of-the-art, optimizing compiler for Haskell, provides several
+extensions to the type system, which allow to partially simulate
+dependently typed programming.  
+%
+We will point out the shortcomings compared to the original version.
+%
+
+\subsection{Data  Representation}
+In our model we used the abstract representation \texttt{F as a}
+for a constructor of the algebraic data type \texttt{a} which takes
+arguments \texttt{as}.
+%
+In our implementation we encode it as a Generalized Algebraic
+Data Type (GADT), indexed by a list of types and a target type.
+%
+Each constructor of the algebraic data type is represented separately
+by one of its constructor, which instantiates the first index with
+the type of its arguments and the second with the resulting type.
+%
+For instance we encode the list constructors:
+\begin{minted}{haskell}
+data ListF (as :: [ * ]) (a :: *) where
+  Nil :: ListF '[] [a]
+  Cons :: ListF '[a , [a]] [a]
+\end{minted}
+In Haskell lists are automatically lifted to the type level and they
+both share the same syntax, hence we put a tick to distinguish lifted
+lists, kind \texttt{[ * ]}, from the list type, kind \texttt{*}.
+%
+Primitive types such as integer are also encoded in a similar data
+type, but since they may assume many values, they are all combined in
+a single constructor and the original value is retained.
+\begin{minted}{haskell}
+data IntF xs a where
+  I :: Int -> IntF '[] Int
+\end{minted}
+
+\subsection{Diffing}
+Since \texttt{diff3} relies on \texttt{diff} we define a type class
+for types that can be diffed.
+
+\begin{minted}{haskell}
+class Typeable a => Diff a where
+  type FamilyOf a :: [ * ] -> * -> *
+  toHTree :: a -> HTree a
+  fromHTree :: HTree a -> a
+  (=?=) :: F xs a -> F ys a -> Maybe (xs :~: ys)
+  distance :: F xs a -> F ys a -> Double
+\end{minted}
+\todo{Better name for FamilyOf. It is not per family but per type}
+The associated type family \texttt{FamilyOf a} returns the concrete
+data type that represents the constructors of \texttt{a}.
+%
+The type synonym \texttt{F} is used to improve readability of signatures:
+\begin{minted}{haskell}
+type F xs a = (FamilyOf a) xs a
+\end{minted}
+\todo{You can also do it with another type class parameter and functional 
+dependencies but it is worse in end.}
+%
+Methods \texttt{toHTree} and \texttt{fromHTree} are inverse functions
+that embed a value into and from the generic representation.
+% 
+The universe used in the implementation corresponds precisely to that
+of the model, except that it requires a \texttt{Diff} instance for
+every child of a node.
+
+\begin{minted}{haskell}
+data HList xs where
+  HNil :: HList []
+  HCons :: Diff a => HTree a -> HList as -> HList (a : as)
+
+data HTree a where
+  Node :: F as a -> HList as -> HTree a
+\end{minted}
+
+This definition automatically ensures that the whole family of mutually recursive 
+types have a \texttt{Diff} instance.
+%
+The method \texttt{(=?=)} checks equality between constructors of the 
+same data type, and if so it returns a proof that their field types
+are equal.
+%
+The superclass \texttt{Typeable} provides methods to inspect and
+compare types.
+%
+When merging, constructors can be compared by
+\texttt{(=?=)} only after establishing that they are both constructors
+of the same data type. 
+%
+We use the method \texttt{eqT} from the \texttt{Typeable} superclass
+of \texttt{Diff} for that:
+\begin{minted}{haskell}
+sameT :: (Diff a, Diff b) => F xs a -> F ys b -> Maybe (a :~: b)
+sameT _ _ = eqT
+\end{minted}
+Note that the arguments are ignored and used exclusively to fix which
+types must be compared.
+
+The method \texttt{distance} represents a user-customizable distance function
+between nodes, used in the \texttt{diff} algorithm's cost model.
+
+\paragraph{Example}
+We conclude by giving the \texttt{Diff} type class instance for lists and integers.
+
+\begin{minted}{haskell}
+instance Diff a => Diff [a] where	
+  type FamilyOf [a] = ListF
+
+  Nil =?= Nil = Just Refl
+  Cons =?= Cons = Just Refl
+  _ =?= _ = Nothing
+
+  toHTree [] = Node Nil HNil
+  toHTree (x : xs) = Node Cons (HCons (toHTree x) hs)
+    where hs = HCons (toHTree xs) HNil
+
+  fromHTree (Node Nil HNil) = []
+  fromHTree (Node Cons (HCons t (HCons ts HNil))) 
+    = fromHTree x : fromHTree ts
+\end{minted} 
+%
+Note that after defining the associated type \texttt{FamilyOf} to be \texttt{ListF},
+we can match constructors \texttt{Nil} and \texttt{Cons} in the other
+methods and that the instance is polymorphic.
+
+\begin{minted}{haskell}
+instance Diff Int where
+  type FamilyOf Int = IntF
+
+  (I x) =?= (I y) = if x == y then Just Refl else Nothing
+  
+  toHTree x = Node (I x) HNil
+  
+  fromHTree (Node (I x) HNil) = x
+\end{minted}
+When applied to primitive types, method \texttt{=?=} needs to check that the
+actual value is equal.
+
+\paragraph{Edit Script}
+The edit script data type is similar to that of Agda, with the only difference
+that edit operations are not encoded in a separate data type, but are
+inlined in it.
+
+\begin{minted}{haskell}
+data ES xs ys where
+  End :: ES [] []
+  Nop :: ES xs ys -> ES xs ys
+  Ins :: Diff a => F xs a -> ES ys (xs :++: zs) -> ES ys (a ': zs)
+  Del :: Diff a => F xs a -> ES (xs :++: ys) zs -> ES (a ': ys) zs
+  Upd :: Diff a => F xs a -> F ys a -> ES (xs :++: zs) (ys :++: ws) 
+      -> ES (a ': zs) (a ': ws)
+\end{minted}
+The original version cannot be translated as it is, because of the 
+ambiguity of the type level lists prefixes, that would require
+the use of singleton types \cite{Eisenberg12DTPS}.
+Symbol \texttt{:++:} denotes type-level append.
+
+\paragraph{Algorithm}
+A \texttt{diff} algorithm takes as input two objects and outputs an
+edit script that reports the differences between them.
+%
+In particular GNU \texttt{diff} finds a \emph{minimal length} edit
+script, or equivalently the \emph{longest common subsequence} of its
+inputs \cite{Berg00, PierceDiff3}, that is a script which 
+copies as many lines as possible.
+%
+Our \texttt{diff} algorithm is mostly an extension of that of
+Lempsink's et al.\ therefore we present here only the principal
+differences.  
+%
+
+\paragraph{Cost Model}
+The original \texttt{diff} algorithm produces edit scripts
+that contain only delete, insert and copy operations.
+%
+The original cost model is straightforward and assign cost 1 to every
+edit, hence preferring copy edits over an equivalent insert and delete.
+%
+In this paper we have generalized copy to update and we have introduced
+a \texttt{Nop} operation , therefore we have to adjust the cost model
+accordingly.
+
+\begin{minted}{agda}
+cost : ES as bs -> Dobule
+cost (Nop e) = 1 + cost e
+cost (Del x e) = 1 + cost e
+cost (Ins y e) = 1 + cost e
+cost (Upd x y e) = distance x y + cost e 
+cost [] = 0
+\end{minted}
+
+The edit \texttt{Nop} has weight one, even though it has no
+operational effect, because it increases the length of an edit script.
+%
+In other words for any edit script that contains some \texttt{Nop} an
+equivalent script with smaller cost can be obtained by removing each
+\texttt{Nop} edit.
+%
+The function \texttt{distance} computes the cost of an update between
+constructors of the same type and it is expected to be a
+\emph{metric}.
+
+\begin{definition}[Metric]
+\label{par:Metric}
+A metric on a set A is a function
+d : (A × A) → ${\rm I\!R}$ such that $\forall$ x, y, z $\in$ A:
+	\begin{align*}
+		d(x, y) &\geq 0 \quad &\mbox{\emph{{(non-negativity)}}}\\ 
+		d(x, y) &= 0 \Leftrightarrow x = y \quad &\mbox{\emph{(coincidence axiom)}} \\		
+		d(x, y) &= d(y, x) \quad &\mbox{\emph{(symmetry)}}\\
+		d(x, z) &\leq d(x, y) + d(y, z) \quad &\mbox{\emph{(triangle inequality})}
+	\end{align*}
+	
+\end{definition}
+A reasonable distance function for algebraic
+data type constructors is the \emph{discrete distance}:
+	\[ d(x, y) = 
+		\begin{cases} 
+			0 \quad &\mbox{if } x = y \\
+			1 \quad &\mbox {otherwise}		
+		\end{cases} \]	
+%
+
+The binary operator \texttt{\_⨅\_} selects the edit script that minimizes \texttt{cost}.
+\begin{minted}{agda}
+(⨅) : ES as bs -> ES as bs -> ES as bs
+e₁ ⨅ e₂ = if cost e₁ ≤ cost e₂ then e₁ else e₂
+\end{minted}
+
+We show a short, yet naive, version of the \texttt{diff} algorithm for simplicity,
+furthermore we extend list syntax to heterogeneous lists for clarity:
+\begin{minted}{agda}
+diff : DList as -> DList bs -> ES as bs
+diff [] [] = End
+diff [] (Node β ys₁ ∷ ys₂) = Ins β $ diff [] (ys₁ +++ ys₂)
+diff (Node α xs₁ ∷ xs₂) [] = Del α $ diff (xs₁ +++ xs₂) []
+diff (Node α xs₁ ∷ xs₂) (Node β ys₁ ∷ ys₂) =
+  let d = Del α $ diff (xs₁ +++ xs₂) (Node β ys₁ ∷ ys₂) 
+      i = Ins β $ diff (Node α xs₁ ∷ xs₂) (ys₁ +++ ys₂) in
+    case sameT α β of
+      Nothing -> d ⨅ i
+      Just Refl -> d ⨅ i ⨅ u
+        where u = Upd α β $ diff (xs₁ +++ xs₂) (ys₁ +++ ys₂)
+\end{minted}
+In the first case both input lists and the script is completed with
+\texttt{End}.
+%
+In the second and third case one of the two lists is empty, hence the
+algorithm inserts (deletes) each remaining node from the other list.
+%
+The third case, when both lists are non-empty, is the most
+interesting.
+%
+Either the first node can be deleted, or the second node can be
+inserted, or, if the nodes have the same target type, checked using
+\texttt{sameT}, the first node can be updated with the second.
+%
+In each case the rest of the edit script is computed recursively,
+prepending to either list the children of a node.
+%
+Lastly the script that minimizes the cost function is selected 
+using \texttt{⨅}.
+%
+Note that the \texttt{Nop} edit is never used because it does not
+consume neither of the two lists, while at the same time it worsen
+the script longer than needed.
+%
+%
+This version of the algorithm is naive because it is very inefficient,
+since it contains several recursive calls that perform the same
+sub-computations multiple times.
+%
+In our implementation we have employed memoization to achieve
+practical performance \cite{Lemp09}.
+
+We conclude with the entry point of our data type generic diff algorithm.
+\begin{minted}{haskell}
+gdiff : (Diff a, Diff b) => a -> b -> ES '[ a ] '[ b ]
+gdiff x y = diff [ toHTree x ] [ toHTree y ] 
+\end{minted}
+The objects to be diffed are converted to the generic tree
+representation and inserted in a singleton heterogeneous list, which
+are then compared using \texttt{diff}.
+
+\subsection{Merging}
+\paragraph{Conflict}
+Conflict data type
+\paragraph{Merged Script}
+ES3 data-type.
+\paragraph{Algorithm}
+Signature only, considerations about alignment and type checking.
+
+\subsection{Example}
+Interactive session with initial example revised.
 
 \section{Discussion and Related Work}
 \label{sec:related-work}
