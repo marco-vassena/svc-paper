@@ -117,8 +117,8 @@
   raising conflicts when the changes are irreconcilable.
   %
   The program ignores the actual structure of the data stored in the
-  files, hence it might generate spurious conflicts, that need to be
-  manually resolved.
+  files, hence it might generate spurious conflicts that must be
+  manually resolved by the user.
   %
   In this paper we present a state-based, three-way, persistent,
   data-type generic \texttt{diff3} algorithm whose increased precision
@@ -139,8 +139,8 @@
   invariant preserved.
   %
   We have implemented our algorithm in Haskell in order to make our results
-  practical and employed the latest type-system features to retain the
-  same level of type safety of full-blown dependent types.
+  practical and employed advanced type-system features to retain a 
+  fair amount of type safety.
   \todo{Abstract Conclusion?}
 \end{abstract}
 
@@ -159,13 +159,13 @@ Version control systems (VCS) such as Git \cite{Git} and Mercurial \cite{Mercuri
 are used in the software industry, as well as in the open source community and by researchers all over the world to develop software.
 These tools track all the changes in the source code throughout its development, making it possible to quickly roll back to any previous version. Furthermore developers can simultaneously work on the same project and use a VCS to merge their changes together.
 VCS provides these features by means of two algorithms, called \texttt{diff} and \texttt{diff3}.
-The former detects changes in source code files and it is used to track their history, while the latter merges independent changes made to the code base, allowing simultaneous development.
+The former detects changes in source code files, while the latter merges independent changes made to the code base, allowing simultaneous development.
 These algorithms are line-based, they compare files line by line, and can be used not only on software artifacts, but with any text-based file. 
 Unfortunately their fixed-granularity limit their precision when detecting changes and deteriorate their merging capabilities. In this paper we develop a data-type generic version of the \texttt{diff} and \texttt{diff3} algorithms, that improve their precision and applicability.
 
 \paragraph{Example}
 We show the shortcomings of the line-based \texttt{diff} and \texttt{diff3} algorithms by means of an example.
-The Comma Separated Values file format (CSV) is a simple text-based encoding of data stored in tables \cite{csv}.
+The Comma Separated Values file format (CSV) is a simple text-based encoding of data stored in tables. %b \cite{csv}.
 In a CSV file every line represents a row of the table and within each row commas separate values in different columns.
 For instance the file \texttt{a.csv} encodes a $3 \times 3$ table containing numbers from 1 to 9.
 \begin{figure}[!h]
@@ -240,7 +240,7 @@ The second user changes some values in the third column and saves the new table 
 \end{figure}
 
 The two users would like to synchronize their work now and decide to use 
-\texttt{diff3} to merge their versions. They have modified \emph{indipendent} parts of the table, therefore they are confident that it is should be possible to automatically merge the changes, without incurring in a conflict.
+\texttt{diff3} to merge their versions. They have modified \emph{independent} parts of the table, therefore they are confident that it is should be possible to automatically merge the changes, without incurring in a conflict.
 Unfortunately \texttt{diff3} is a line-based algorithm therefore it compares files line by line, without considering the actual structure of the data stored in the files. As a result the algorithm fails to merge the two tables and raises spurious conflicts.
 
 In particular \texttt{diff3} employs the \emph{three-way-merge} technique to compare and merge the corresponding lines of three files. The following table shows the result of applying this technique to the previous tables:
@@ -288,13 +288,26 @@ In this paper we make the following contributions:
 \item In section \ref{subsec:diff3-algo} we show a data-type generic, three-way 
       \texttt{diff3} algorithm that satisfy our specifications and we study its 
       formal properties in section \ref{sec:properties}.
-\todo{Haskell implementation?}
 \end{itemize}
-We have implemented these algorithms using generic programming techniques in Agda \cite{agda}, a programming language with dependent types and a proof assistant. 
-Dependent types are particularly convenient in this setting to idiomatically encode the pre-conditions and post-conditions of our algorithms and ultimately verify their properties.
-The source code containing the \texttt{diff} and \texttt{diff3} algorithms, their properties and formal proofs are available online\footnote{TODO create separate repo just for this}. 
-For the sake of presentation we have simplified the code presented in this paper, for instance by 
-hiding implicit arguments and universe levels.
+We have implemented these algorithms using generic programming
+techniques in Agda \cite{Bove09}, a programming language with dependent
+types and a proof assistant. Dependent types are particularly
+convenient in this setting to idiomatically encode the pre-conditions
+and post-conditions of our algorithms and ultimately verify their
+properties.
+%
+We have then put our model into practice by efficiently implementing
+our algorithms in Haskell \cite{Marlow_haskell2010}.
+%
+In section \ref{sec:haskell} we point out the shortcomings and
+compromises that we had to make when moving from a language with 
+dependent types to a less expressive one.
+%
+The source code containing the \texttt{diff} and \texttt{diff3}
+algorithms, their properties and formal proofs are available
+online\footnote{https://github.com/marco-vassena/gdiff3}.  For the
+sake of presentation we have simplified the code presented in this
+paper, for instance by hiding implicit arguments and universe levels.
 
 \section{Universe}
 In order to implement data type generic algorithms we need a generic
@@ -742,7 +755,7 @@ data _⊔_↥_ : (u ⟿ v) → (u ⟿ w) → Conflict u v w → Set where
         rule.
         Given these inequalities the corresponding conflict is uniquely determined,
         i.e. for any concrete choice of \texttt{u}, \texttt{v} and \texttt{w} that
-        are all different, there is only a single conflict \texttt{c} that applies.
+        are all different, the conflict \texttt{c} is uniquely determined.
 	As a result also the semantics of conflict is minimal, but still complete
         because it can encode all the true conflicts.
 
@@ -771,7 +784,7 @@ data _⊔_↥_ : (u ⟿ v) → (u ⟿ w) → Conflict u v w → Set where
         \end{prop}
 
         Now that we have established that our semantics is sensible we
-        lastly define a decision function that combines two edits.
+        lastly define a function that merges edits.
 
 	\paragraph{Merge Operator}
 	The binary operator \texttt{⊔} merges two aligned edits.
@@ -1426,18 +1439,18 @@ data ListF (as :: [ * ]) (a :: *) where
 \end{minted}
 In Haskell lists are automatically lifted to the type level and they
 both share the same syntax, hence we put a tick to distinguish lifted
-lists, kind \texttt{[ * ]}, from the list type, kind \texttt{*}.
+lists of kind \texttt{[ * ]} from the list type of kind \texttt{*}.
 %
 Primitive types such as integer are also encoded in a similar data
 type, but since they may assume many values, they are all combined in
-a single constructor and the original value is retained.
+a single constructor that takes the original value.
 \begin{minted}{haskell}
 data IntF xs a where
   I :: Int → IntF '[] Int
 \end{minted}
 
 \subsection{Diffing}
-Since \texttt{diff3} relies on \texttt{diff} we define a type class
+Since \texttt{diff3} relies on \texttt{diff} we start by defining a type class
 for types that can be diffed.
 
 \begin{minted}{haskell}
@@ -1478,7 +1491,7 @@ data HTree a where
 This definition automatically ensures that the whole family of mutually recursive 
 types have a \texttt{Diff} instance.
 %
-The method \texttt{(=?=)} checks equality between constructors of the 
+Method \texttt{(=?=)} checks equality between constructors of the 
 same data type, and if so it returns a proof that their field types
 are equal.
 
@@ -1494,7 +1507,7 @@ When merging, constructors can be compared by
 \texttt{(=?=)} only after establishing that they are both constructors
 of the same data type. 
 %
-We use the method \texttt{eqT} from the \texttt{Typeable} superclass
+The following function uses \texttt{eqT} from the \texttt{Typeable} superclass
 of \texttt{Diff} for that:
 \begin{minted}{haskell}
 (=??=) :: (Diff a, Diff b) => F xs a → F ys b → Maybe (a :~: b)
@@ -1502,12 +1515,12 @@ _ =??= _ = eqT
 \end{minted}
 Note that the arguments are ignored and used exclusively to fix which
 types must be compared.
-
-The method \texttt{distance} represents a user-customizable distance function
+Lastly method \texttt{distance} represents a user-customizable distance function
 between nodes, used in the \texttt{diff} algorithm's cost model.
 
 \paragraph{Example}
-We conclude by giving the \texttt{Diff} type class instance for lists and integers.
+As an example we give the \texttt{Diff} type class instances for list and integers,
+which alone allow to diff CSV tables, like those in the initial example.
 
 \begin{minted}{haskell}
 instance Diff a => Diff [a] where	
@@ -1526,9 +1539,8 @@ instance Diff a => Diff [a] where
     = fromHTree x : fromHTree ts
 \end{minted} 
 %
-Note that after defining the associated type \texttt{FamilyOf} to be \texttt{ListF},
-we can match constructors \texttt{Nil} and \texttt{Cons} in the other
-methods and that the instance is polymorphic.
+Note that the instance is polymorphic, so that it can be instantiated
+with both \texttt{[Int]} and \texttt{[[Int]]}.
 
 \begin{minted}{haskell}
 instance Diff Int where
@@ -1545,8 +1557,8 @@ actual value is equal.
 
 \paragraph{Edit Script}
 The edit script data type is similar to that of Agda, with the only difference
-that edit operations are not encoded in a separate data type, but are
-inlined in it.
+that edit operations are not represented by a separate data type, but are
+embedded in its constructors.
 
 \begin{minted}{haskell}
 data ES xs ys where
@@ -1556,10 +1568,10 @@ data ES xs ys where
   Upd :: Diff a => F xs a → F ys a → ES (xs :++: zs) (ys :++: ws) 
       → ES (a ': zs) (a ': ws)
 \end{minted}
-The original version cannot be encoded as it is in Haskell, due to the
-limitations of the datatype promotion mechanism \cite{Yorgey12} and
-the absence of pi-types.  Symbol \texttt{:++:} denotes type-level
-append.  
+The original version cannot be translated directly to Haskell as it
+is, due to the limitations of the datatype promotion mechanism
+\cite{Yorgey12} and the absence of pi-types.  Symbol \texttt{:++:}
+denotes type-level append.
 %
 Since there is no separate edit data type, we do not include a
 no-operation edit in the script. 
@@ -1654,7 +1666,7 @@ The third case, when both lists are non-empty, is the most
 interesting.
 %
 Either the first node can be deleted, or the second node can be
-inserted, or, if the nodes have the same target type, checked using
+inserted, or, if the nodes have the same target type, tested by
 \texttt{=??=}, the first node can be updated with the second.
 %
 In each case the rest of the edit script is computed recursively,
@@ -1681,14 +1693,13 @@ are then compared using \texttt{diff}.
 
 \subsection{Merging}
 Merging consists in diffing the base version with respect to each
-new version, which produces two edit scripts that are combined
+new version, producing two edit scripts that are combined
 following the three-way merge technique. The merge may fail either
 due to some conflict or because it generates an ill-typed 
 script. 
 
 \paragraph{Conflict}
-The conflict data type encodes why it is not possible two merge two edits.
-
+The conflict data type encodes why it is not possible to merge two edits:
 \begin{minted}{haskell}
 data Conflict where
   InsIns :: (Diff a, Diff b) => F xs a → F ys b → Conflict
@@ -1697,10 +1708,9 @@ data Conflict where
   UpdUpd :: Diff a => F xs a → F ys a → F zs a → Conflict
 \end{minted}
 
-Its type is much simpler compared to the model because of the
-limitation in the data promotion mechanism, which prevents GADTs from
-being indexed from other GADTs, in particular it is not indexed by the
-base and new values.
+The data type is much simpler compared to the model: it is not indexed
+by the base and new values.  This is mainly because the data promotion
+mechanism prevents GADTs from being indexed from other GADTs.
 
 \paragraph{Merged Script}
 The \texttt{ES3 xs} data type represents a merged edit script, which
@@ -1714,12 +1724,8 @@ data ES3 xs where
   Upd3 :: Diff a => F xs a → F ys a 
          → ES3 (xs :++: zs) → ES3 (a ': zs) 
 \end{minted}
-The script might be ill-typed with respect to the output list,
-since nothing is enforced about the output types.
-%
-However the script is guaranteed to be well-typed with respect to the
-source list, simplifying the type checking phase, which then has to
-check the output types only.
+The script is well-typed with respect to the input list simplifying
+type checking, since only the output types have to be checked.
 %
 The only exception is the constructor \texttt{Cnf3}, which does not
 retain enough type information to maintain this property.
@@ -1729,12 +1735,12 @@ is already ill-typed, according to the rules given in \ref{subsec:diff3-algo}.
 %
 
 \paragraph{Alignment}
-Due to the lack of proper dependent types we cannot guarantee that
-merge is called only on aligned scripts, therefore this condition is
-checked at run-time.
+Due to the lack of proper dependent types unaligned scripts are
+not automatically ruled out when merging, therefore they have to
+be handled explicitly.
 %
-The following auxiliary functions checks this condition and throws an
-error otherwise.
+The following auxiliary functions tests equality between nodes
+and throws an error if this is not the case.
 \begin{minted}{haskell}
 aligned :: (Diff a, Diff b) => F xs a → F ys b → (xs :~: ys , a :~: b)
 aligned a b =
@@ -1810,8 +1816,8 @@ well-typed we have to check that it does in fact generate an object of the
 correct type.  The function \texttt{hasRightTarget}, omitted, takes
 care of that.
  
-\subsection{Example}
-Interactive session with initial example revised.
+% \subsection{Example}
+% Interactive session with initial example revised.
 
 \section{Discussion and Related Work}
 \label{sec:related-work}
