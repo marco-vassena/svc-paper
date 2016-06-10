@@ -112,12 +112,12 @@
 
 \begin{abstract}
 \todo{190 words: too long? Should I aim for 150-170?}
-  The UNIX \texttt{diff3} program automatically merges two the text
+  The UNIX \texttt{diff3} program automatically merges two text
   files, given a common base version, comparing them line by line and
   raising conflicts when the changes are irreconcilable.
   %
   The program ignores the actual structure of the data stored in the
-  files, hence it generates spurious conflicts, that need to be
+  files, hence it might generate spurious conflicts, that need to be
   manually resolved.
   %
   In this paper we present a state-based, three-way, persistent,
@@ -323,8 +323,10 @@ their children to their fields.
         %
 	We will show in section \ref{sec:haskell} how to instantiate \texttt{F} with concrete 
         data types. In the model we will just leave it abstract as a module parameter.
+        We furthermore assume an equality operator for it.
 \begin{minted}{agda}
-module Diff3 (F : List Set → Set → Set) where
+module Diff3 (F : List Set → Set → Set) 
+              (_≟_ : (α : F as a) (β : F bs b) → Dec (α ≡ β)) where
 \end{minted}
 	
         \paragraph{Example} 
@@ -1479,7 +1481,12 @@ types have a \texttt{Diff} instance.
 The method \texttt{(=?=)} checks equality between constructors of the 
 same data type, and if so it returns a proof that their field types
 are equal.
-%
+
+\begin{minted}{haskell}
+data a :~: b where
+  Refl :: a :~: a
+\end{minted}
+
 The superclass \texttt{Typeable} provides methods to inspect and
 compare types.
 %
