@@ -2010,7 +2010,27 @@ to analyze.
 
 \section{Conclusion}
 \label{sec:conclusion}
+We present a state-based, three-way, persistent, data type generic
+\texttt{diff3} algorithm for typed algebraic data type.
+%
+By employing more accurate edits we detect changes in data more
+precisely, leading to more specific edit scripts and ultimately
+reducing the number of spurious conflicts raised in merges and
+improving the quality of automatic reconciliation.
+%
+We formalize the semantics of merge and conflict in Agda and
+use it to prove several properties about our algorithm allowing
+users to reason about complex merge operations.
+%
+We have released an efficient version of our algorithm as an Haskell
+library making it possible to put our results into practice, embedded
+in application such as VCS.
 
+
+% We achieve a better precision in detecting changing 
+% in the \emph{change-detection} phase by
+% extending the 
+%  the edits that describe changes in adata we achieve a 
 % \appendix
 % \section{Appendix Title}
 
