@@ -449,11 +449,11 @@ data Val : List Set → List Set → Set where
 	The set of edit operations considered includes a no-operation, node 
 	deletion, insertion and update.
 \begin{minted}{agda}
-data _⟿_ : Val as bs → Val cs ds → Set where
-  Nop : ⊥ ⟿ ⊥
-  Del : (α : C as a) → ⟨ α ⟩ ⟿ ⊥
-  Ins : (α : C as a) → ⊥ ⟿ ⟨ α ⟩
-  Upd : (α : C as a) (β : C bs a) → ⟨ α ⟩ ⟿ ⟨ β ⟩
+data _⟼_ : Val as bs → Val cs ds → Set where
+  Nop : ⊥ ⟼ ⊥
+  Del : (α : C as a) → ⟨ α ⟩ ⟼ ⊥
+  Ins : (α : C as a) → ⊥ ⟼ ⟨ α ⟩
+  Upd : (α : C as a) (β : C bs a) → ⟨ α ⟩ ⟼ ⟨ β ⟩
 \end{minted}
 	Edits are indexed by two values, called respectively 
 	\emph{source} and \emph{target} values. The \texttt{Nop} edit is 
@@ -479,7 +479,7 @@ data _⟿_ : Val as bs → Val cs ds → Set where
 \begin{minted}{agda}
 data ES : List Set → List Set → Set where
   [] : ES [] []
-  _::_ : {v : Val as bs} {w : Val cs ds} → v ⟿ w → 
+  _::_ : {v : Val as bs} {w : Val cs ds} → v ⟼ w → 
           ES (as ++ xs) (cs ++ ys) → ES (bs ++ xs) (ds ++ ys)
 \end{minted}	
 	An edit script of type \texttt{ES xs ys} transforms
@@ -633,7 +633,7 @@ diff-suff :  (x : HList xs) (y : HList ys) → Diff x y (diff x y)
 \begin{minted}{agda}
 data _⋎_ : ES as bs → ES as cs → Set where
   nil : [] ⋎ []
-  cons : (f : u ⟿ v) (g : u ⟿ w) → e₁ ⋎ e₂ → (f ∷ e₁) ⋎ (g ∷ e₂)
+  cons : (f : u ⟼ v) (g : u ⟼ w) → e₁ ⋎ e₂ → (f ∷ e₁) ⋎ (g ∷ e₂)
 \end{minted}
 	The definition is recursive: two edit scripts are aligned if
         either they are both empty or their heads and their tails are
@@ -728,10 +728,10 @@ align : Diff x y e₁ → Diff x z e₂ → e₁ ~ e₂
 	aligned edits \texttt{f} and \texttt{g} succeeds producing the edit \texttt{h}.
 	
 \begin{minted} {agda}
-data _⊔_↧_ : (v ⟿ a) → (v ⟿ b) → (v ⟿ c) → Set where
-  Id₁ : (f : v ⟿ v) (g : v ⟿ w) → f ⊔ g ↧ g
-  Id₂ : (f : v ⟿ w) (g : v ⟿ v) → f ⊔ g ↧ f
-  Idem : (f : v ⟿ w) → f ⊔ f ↧ f
+data _⊔_↧_ : (v ⟼ a) → (v ⟼ b) → (v ⟼ c) → Set where
+  Id₁ : (f : v ⟼ v) (g : v ⟼ w) → f ⊔ g ↧ g
+  Id₂ : (f : v ⟼ w) (g : v ⟼ v) → f ⊔ g ↧ f
+  Idem : (f : v ⟼ w) → f ⊔ f ↧ f
 \end{minted}
 
 	Observe that the type of the two input edits guarantees their
@@ -788,8 +788,8 @@ data Conflict : Val as bs → Val cs ds → Val es fs → Set where
         \texttt{c}.
 
 \begin{minted}{agda}
-data _⊔_↥_ : (u ⟿ v) → (u ⟿ w) → Conflict u v w → Set where
-  Cnf : (f : u ⟿ v) (g : u ⟿ w) → u ≢ v → v ≢ w  → u ≢ w → 
+data _⊔_↥_ : (u ⟼ v) → (u ⟼ w) → Conflict u v w → Set where
+  Cnf : (f : u ⟼ v) (g : u ⟼ w) → u ≢ v → v ≢ w  → u ≢ w → 
         (c : Conflict u v w) → f ⊔ g ↥ c
 \end{minted}
 
@@ -843,7 +843,7 @@ data _⊔_↥_ : (u ⟿ v) → (u ⟿ w) → Conflict u v w → Set where
         proof that \texttt{f ⊔ g ↥ c}.
         
 \begin{minted}{agda}
-_⊔_ : (f : u ⟿ v) (g : u ⟿ w) →
+_⊔_ : (f : u ⟼ v) (g : u ⟼ w) →
         (∃ λ c → f ⊔ g ↥ c) ⊎ (∃ λ h → f ⊔ g ↧ h)
 \end{minted}
 	This operator is outlined in table \ref{table:merge}, where we have
@@ -896,7 +896,7 @@ _⊔_ : (f : u ⟿ v) (g : u ⟿ w) →
 \begin{minted}{agda}
 data ES₃ : List Set → Set where
   [] : ES₃ []
-  _∷_ : {u : Val as bs} → u ⟿ v → ES₃ (as ++ xs) → ES₃ (bs ++ xs)
+  _∷_ : {u : Val as bs} → u ⟼ v → ES₃ (as ++ xs) → ES₃ (bs ++ xs)
   _∷ᶜ_ : {u : Val as bs} → (c : Conflict u v w) → 
              ES₃ (as ++ xs) → ES₃ (bs ++ xs)
 \end{minted}
@@ -1133,23 +1133,23 @@ data _⊔₃_↥_ : ES xs ys → ES xs zs → Conflict u v w → Set where
 %     A similar data type denotes the presence of an edit in a script.
 
 % \begin{minted}{agda}
-% data _∈ₑ_ : v ⟿ w → ES xs ys → Set where
-%   here : (f : v ⟿ w) → f ∈ₑ f ∷ e
+% data _∈ₑ_ : v ⟼ w → ES xs ys → Set where
+%   here : (f : v ⟼ w) → f ∈ₑ f ∷ e
 %   there : f ∈ₑ e → f ∈ₑ g ∷ e
 % \end{minted}
 
-    % Lastly the judgment \texttt{e ⊢ₑ u ⟿ v} denotes that
-    % the script \texttt{e} contains some edit of type \texttt{u ⟿ v}.
+    % Lastly the judgment \texttt{e ⊢ₑ u ⟼ v} denotes that
+    % the script \texttt{e} contains some edit of type \texttt{u ⟼ v}.
 \begin{definition}[Edit Mapping]
 An edit script \texttt{e} maps source value \texttt{u} into
-target value \texttt{v}, written \texttt{e ⊢ u ⟿ v}, if and
-only if there is an edit \texttt{f : u ⟿ v} such that \texttt{f ∈ e}.
+target value \texttt{v}, written \texttt{e ⊢ u ⟼ v}, if and
+only if there is an edit \texttt{f : u ⟼ v} such that \texttt{f ∈ e}.
 \end{definition}
 
 % I think I will skip this one and directly state the more interesting one
 % \begin{minted}{agda}
-%    ∀   f : ⟨ α ⟩ ⟿ v  .  f ∈ₑ e   ⇒   α ∈ ⟪ e ⟫
-%    ∀   f : v ⟿ ⟨ α ⟩  .  f ∈ₑ e   ⇒   α ∈ ⟦ e ⟧
+%    ∀   f : ⟨ α ⟩ ⟼ v  .  f ∈ₑ e   ⇒   α ∈ ⟪ e ⟫
+%    ∀   f : v ⟼ ⟨ α ⟩  .  f ∈ₑ e   ⇒   α ∈ ⟦ e ⟧
 % \end{minted}
 
 The following property shows that in an edit script a source (target)
@@ -1160,8 +1160,8 @@ In other words the source function \texttt{⟪\_⟫} and target function
 \begin{prop}[\texttt{⟪\_⟫} and \texttt{⟦\_⟧} are correct]
 \label{prop:source-target-cmp}
 Given an edit script \texttt{e} and a node \texttt{α} then.
-If \texttt{e ⊢ ⟨ α ⟩ ⟿ v} then \texttt{α ∈ ⟪ e ⟫}.
-Similarly if \texttt{e ⊢ v ⟿ ⟨ α ⟩} then \texttt{α ∈ ⟦ e ⟧}.
+If \texttt{e ⊢ ⟨ α ⟩ ⟼ v} then \texttt{α ∈ ⟪ e ⟫}.
+Similarly if \texttt{e ⊢ v ⟼ ⟨ α ⟩} then \texttt{α ∈ ⟦ e ⟧}.
 \end{prop}
 
 We now formally state the \emph{data origin} property.
@@ -1169,7 +1169,7 @@ We now formally state the \emph{data origin} property.
 \begin{prop}[Data Origin]
 Let \texttt{x} and \texttt{y} be two heterogeneous lists, let \texttt{e = diff x y}
 and let \texttt{α} be a node.
-If \texttt{e ⊢ ⟨ α ⟩ ⟿ v} then \texttt{α ∈ x}. Similarly if \texttt{e ⊢ v ⟿ ⟨ α ⟩}
+If \texttt{e ⊢ ⟨ α ⟩ ⟼ v} then \texttt{α ∈ x}. Similarly if \texttt{e ⊢ v ⟼ ⟨ α ⟩}
 then \texttt{α ∈ y}.
 \end{prop}    
 \begin{proof}
@@ -1185,10 +1185,10 @@ We now formally state the \emph{data retention} property.
   \texttt{e = diff x y} and let \texttt{α} be a node.
 %
   If \texttt{α ∈ x} then there is a target value \texttt{v} such that
-  \texttt{e ⊢ ⟨ α ⟩ ⟿ v}.
+  \texttt{e ⊢ ⟨ α ⟩ ⟼ v}.
 %
   Similarly if \texttt{α ∈ y} then there is a source value \texttt{v} such that
-  \texttt{e ⊢ v ⟿ ⟨ α ⟩}.
+  \texttt{e ⊢ v ⟼ ⟨ α ⟩}.
 \end{prop}
 \begin{proof}
   It follows from Requirement \ref{req:diff-specs} and Proposition
@@ -1235,7 +1235,7 @@ If \texttt{f ∈ e₃} then either \texttt{f ∈ e₁} or \texttt{f ∈ e₂}.
 \begin{thm}[Persistence]
 Let \texttt{e₁}, \texttt{e₂}, \texttt{e₃} be scripts such that
 \texttt{e₁ ⋎ e₂} and \texttt{e₃ = e₁ ⊔₃ e₂}. Let \texttt{f} be an edit
-of type \texttt{u ⟿ v} such that \texttt{u ≢ v} and \texttt{f ∈ e₁}.
+of type \texttt{u ⟼ v} such that \texttt{u ≢ v} and \texttt{f ∈ e₁}.
 Then either \texttt{f ∈ e₃} or there is a conflict \texttt{c} such that
 \texttt{e₁ ⊔₃ e₂ ↑ c}.
 \end{thm}
@@ -1359,7 +1359,7 @@ edit that produces the second.
 \begin{prop}[\texttt{⟦\_⟧} is OP]
 \label{prop:order-preserving-target-fun}
 Let \texttt{e} be an edit script and \texttt{f} and \texttt{g} edits
-of type \texttt{v ⟿ ⟨ α ⟩} and \texttt{w ⟿ ⟨ β ⟩}, such that
+of type \texttt{v ⟼ ⟨ α ⟩} and \texttt{w ⟼ ⟨ β ⟩}, such that
 \texttt{e ⊢ f ⊏ g}, then \texttt{⟦ e ⟧ ⊢ α ⊏ β}.
 \end{prop}
   We omit the symmetrical property for \emph{source} nodes and objects.
@@ -1369,7 +1369,7 @@ of type \texttt{v ⟿ ⟨ α ⟩} and \texttt{w ⟿ ⟨ β ⟩}, such that
 Let \texttt{x} and \texttt{y} be heterogeneous lists and let 
 \texttt{e} be an edit script such that \texttt{e = diff x y}.
 Let also \texttt{α} and \texttt{β} be nodes such that \texttt{y ⊢ α ⊏ β}.
-Then there are edits \texttt{f : u ⟿ ⟨ α ⟩} and \texttt{g : v ⟿ ⟨ β ⟩}
+Then there are edits \texttt{f : u ⟼ ⟨ α ⟩} and \texttt{g : v ⟼ ⟨ β ⟩}
 such that \texttt{e ⊢ f ⊏ g}.
 \end{prop}
 \begin{proof}
@@ -1377,11 +1377,11 @@ such that \texttt{e ⊢ f ⊏ g}.
   \ref{prop:diff-correct} (requirements and specifications of
   \texttt{diff}).
   %
-  By induction on \texttt{y ⊢ α ⊏ β} we locate \texttt{f : u ⟿ ⟨ α ⟩}
+  By induction on \texttt{y ⊢ α ⊏ β} we locate \texttt{f : u ⟼ ⟨ α ⟩}
   in \texttt{e}. 
   %
   By Proposition \ref{prop:data-retention} it follows that there
-  exists \texttt{g : v ⟿ ⟨ β ⟩} in the tail of \texttt{e}.
+  exists \texttt{g : v ⟼ ⟨ β ⟩} in the tail of \texttt{e}.
 \end{proof}
 We again omit the corresponding property for \emph{source} nodes and object.
 
@@ -1410,19 +1410,19 @@ script \texttt{e}, then one of the following holds:
   Let \texttt{x} and \texttt{y} be heterogeneous lists and \texttt{e}
   an edit script, such that \texttt{e = diff x y}. Let also \texttt{α}
   and \texttt{β} be nodes such that \texttt{x ⊢ α ⊏ β} then either
-  \texttt{e ⊢ ⟨ α ⟩ ⟿ ⊥} or \texttt{e ⊢ ⟨ β ⟩ ⟿ ⊥} or there exists nodes
-  \texttt{γ} and \texttt{φ} such that \texttt{e ⊢ ⟨ α ⟩ ⟿ ⟨ γ ⟩},
-  \texttt{e ⊢ ⟨ β ⟩ ⟿ ⟨ φ ⟩} and \texttt{y ⊢ γ ⊏ φ}.
+  \texttt{e ⊢ ⟨ α ⟩ ⟼ ⊥} or \texttt{e ⊢ ⟨ β ⟩ ⟼ ⊥} or there exists nodes
+  \texttt{γ} and \texttt{φ} such that \texttt{e ⊢ ⟨ α ⟩ ⟼ ⟨ γ ⟩},
+  \texttt{e ⊢ ⟨ β ⟩ ⟼ ⟨ φ ⟩} and \texttt{y ⊢ γ ⊏ φ}.
 \end{thm}
 \begin{proof}
   By Proposition \ref{prop:order-preserving-embedding} there are edits
-  \texttt{f : ⟨ α ⟩ ⟿ u} and \texttt{g : ⟨ β ⟩ ⟿ v}, such that
+  \texttt{f : ⟨ α ⟩ ⟼ u} and \texttt{g : ⟨ β ⟩ ⟼ v}, such that
   \texttt{e ⊢ f ⊏ g}.
   %
   By case analysis either \texttt{u = ⊥} or \texttt{v = ⊥} or \texttt{u = ⟨ γ ⟩}
   and \texttt{v = ⟨ Φ ⟩}. In the first (second) case \texttt{α} (\texttt{β}) is deleted and we are done.
-  In the third case they are both updated, i.e.\ \texttt{e ⊢ ⟨ α ⟩ ⟿ ⟨ γ ⟩} and
-  \texttt{e ⊢ ⟨ β ⟩ ⟿ ⟨ φ ⟩}.
+  In the third case they are both updated, i.e.\ \texttt{e ⊢ ⟨ α ⟩ ⟼ ⟨ γ ⟩} and
+  \texttt{e ⊢ ⟨ β ⟩ ⟼ ⟨ φ ⟩}.
   %
   By Proposition \ref{prop:order-preserving-target-fun} we deduce that
   \texttt{⟦ e ⟧ ⊢ γ ⊏ Φ} and by Requirement \ref{req:diff-specs} and
@@ -1447,8 +1447,8 @@ the original order in the merged script.
   that \texttt{e₁ ⋎ e₂}, \texttt{e₃ = e₁ ⊔₃ e₂} and \texttt{e₃} does not
   contain conflicts.
 %
-  Let \texttt{f} and \texttt{g} be edits of type \texttt{u ⟿ v} and
-  \texttt{w ⟿ z} such that \texttt{u ≢ v}, \texttt{w ≢ z} and
+  Let \texttt{f} and \texttt{g} be edits of type \texttt{u ⟼ v} and
+  \texttt{w ⟼ z} such that \texttt{u ≢ v}, \texttt{w ≢ z} and
   \texttt{e₁ ⊢ f ⊏ g}, then \texttt{e₃ ⊢ f ⊏ g}.
 \end{thm}
   The theorem holds also with respect to the edits contained in \texttt{e₂}.
