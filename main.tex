@@ -19,7 +19,7 @@
 %
 %-----------------------------------------------------------------------------
 
-\documentclass[preprint]{sigplanconf}
+\documentclass{sigplanconf}
 
 % The following \documentclass options may be useful:
 
@@ -38,7 +38,7 @@
 \usepackage[dvipsnames]{xcolor}  		% Color package
 \definecolor{dgreen}{rgb}{0.,0.6,0.}    % Deep green
 \usepackage{caption}
-\usepackage{todonotes}	% todos
+\usepackage[disable]{todonotes}	% todos
 
 % Figures with border
 \usepackage{float}
@@ -85,6 +85,11 @@
 \copyrightdata{978-1-nnnn-nnnn-n/yy/mm} 
 \doi{nnnnnnn.nnnnnnn}
 
+% \conferenceinfo{TYDE '16}{Sept d--d, 2016, Nara, ST, Japan} 
+% \copyrightyear{2016} 
+% \copyrightdata{978-1-nnnn-nnnn-n/yy/mm} 
+% \doi{nnnnnnn.nnnnnnn}
+
 % Uncomment one of the following two, if you are not going for the 
 % traditional copyright transfer agreement.
 
@@ -99,14 +104,14 @@
 \preprintfooter{short description of paper}   % 'preprint' option specified.
 
 \title{Generic diff3 for Algebraic Datatypes}
-\subtitle{Subtitle Text, if any}
+%\subtitle{Subtitle Text, if any}
 
 \authorinfo{Marco Vassena}
            {Chalmers University}
            {vassena@chalmers.se}
-\authorinfo{Name2\and Name3}
-           {Affiliation2/3}
-           {Email2/3}
+% \authorinfo{Name2\and Name3}
+%            {Affiliation2/3}
+%            {Email2/3}
 
 \maketitle
 
@@ -149,10 +154,10 @@
 % general terms are not compulsory anymore, 
 % you may leave them out
 \terms
-term1, term2
+Algorithms,
 
 \keywords
-keyword1, keyword2
+Diff3, Dependent types, Datatype-generic programming
 
 \section{Introduction}
 Version control systems (VCS) such as Git \cite{Git} and Mercurial \cite{Mercurial}
