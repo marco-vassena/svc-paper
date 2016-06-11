@@ -74,6 +74,17 @@
 \AtBeginEnvironment{minted}{%
   \renewcommand{\fcolorbox}[4][]{#4}}
 
+% Drawings
+\usepackage{tikz}
+\usepackage{tikz-qtree}
+
+\newcommand{\nil}{\texttt{[]}}
+\newcommand{\cons}{\texttt{(:)}}
+\newcommand{\num}[1]{\texttt{#1}}
+
+\usepackage{graphicx}
+\graphicspath{ {images/} }
+
 \begin{document}
 
 \special{papersize=8.5in,11in}
@@ -147,9 +158,9 @@
   the merging algorithm raises a conflict and established a structural
   invariant preserved.
   %
-  We have implemented our algorithm in Haskell in order to make our results
-  practical and employed advanced type-system features to retain a 
-  fair amount of type safety.
+  % We have implemented our algorithm in Haskell in order to make our results
+  % practical and employed advanced type-system features to retain a 
+  % fair amount of type safety.
   \todo{Abstract Conclusion?}
 \end{abstract}
 
@@ -164,6 +175,7 @@ Algorithms,
 Diff3, Dependent types, Datatype-generic programming
 
 \section{Introduction}
+\label{sec:intro}
 Version control systems (VCS) such as Git \cite{Git} and Mercurial
 \cite{Mercurial} are used in the software industry, as well as in the
 open source community and by researchers all over the world to develop
@@ -174,7 +186,7 @@ any previous version.
 Furthermore, developers can simultaneously work on the same project and
 use a VCS to merge their changes together.
 %
-VCS provides these features by means of two algorithms, called
+VCS provide these features by means of two algorithms, called
 \texttt{diff} and \texttt{diff3}.
 %
 The former detects changes in source code files, while the latter
@@ -189,9 +201,11 @@ Unfortunately, their line-granularity limits their precision when
 detecting changes, which consequently deteriorates their merging
 capabilities.
 %
-In this paper, we develop a data-type generic version of the
-\texttt{diff} and \texttt{diff3} algorithms, that improve their
-precision and applicability.
+In this paper, we develop a fine-grained data-type generic version of
+the \texttt{diff} and \texttt{diff3} algorithms, that improve their
+applicability and whose increased precision in detecting changes
+reduces the number of spurious conflicts raised and results more
+specific true conflicts.
 
 \paragraph{Example}
 We show the shortcomings of the line-based \texttt{diff} and \texttt{diff3} algorithms by means of an example.
@@ -300,8 +314,15 @@ A conflict is instead triggered when the same line is different in all the three
 
 
 \paragraph{Discussion}
-The main limitation of \texttt{diff3} and \texttt{diff} is that they are  coarse-grained, because they operate on data representation with a fixed precision consisting of one line of text, therefore disregarding completely any information about the actual structure of the data.
-If \texttt{diff} and \texttt{diff3} were aware of the table structure, consisting of columns and rows, then \texttt{diff} could exactly represent the differences in each version and \texttt{diff3} could automatically merge them, as the users expected:
+The main limitation of \texttt{diff3} and \texttt{diff} is that they
+operate on data representation with a \emph{fixed} precision consisting of
+one line of text, therefore disregarding completely any information
+about the actual structure of the data.
+%
+If \texttt{diff} and \texttt{diff3} were aware of the table structure,
+consisting of columns and rows, then \texttt{diff} could exactly
+represent the differences in each version and \texttt{diff3} could
+automatically merge them, as the users expected:
 \begin{center}
 \begin{tabular}{| c | c | c | c |}
 \hline
@@ -319,15 +340,15 @@ In this paper we make the following contributions:
 \begin{itemize}
 \item In Section \ref{subsec:edit-script}, we define a type-safe edit script data 
       type that supports \emph{delete}, \emph{insert} and \emph{update} edits and 
-      that represents the differences between two objects. In section 
-      \ref{subsec:diff-algo} we give the formal specifications of a \texttt{diff} 
+      that represents the differences between two objects. In Section 
+      \ref{subsec:diff-algo}, we give the formal specifications of a \texttt{diff} 
       algorithm in terms of the edit script data type.
 \item In Section \ref{subsec:merge-semantics}, we formalize the 
       \emph{three-way-merge} strategy and give a precise semantics of 
       \emph{mergeable} and \emph{conflicting} edits. We give 
       the formal specifications of a \texttt{diff3} algorithm in terms of our edit 
       semantics. 
-\item In Section \ref{subsec:diff3-algo}, we show a data-type generic, three-way 
+\item In Section \ref{subsec:diff3-algo}, we show a data type generic, three-way 
       \texttt{diff3} algorithm that satisfy our specifications and we study its 
       formal properties in Section \ref{sec:properties}.
 \end{itemize}
@@ -341,9 +362,9 @@ properties.
 We have then put our model into practice by efficiently implementing
 our algorithms in Haskell \cite{Marlow_haskell2010}.
 %
-In Section \ref{sec:haskell}, we point out the shortcomings and
-compromises that we had to make when moving from a language with 
-dependent types to a less expressive one.
+% In Section \ref{sec:haskell}, we point out the shortcomings and
+% compromises that we had to make when moving from a language with 
+% dependent types to a less expressive one.
 %
 The source code containing the \texttt{diff} and \texttt{diff3}
 algorithms, their properties and formal proofs are available
@@ -363,17 +384,21 @@ their children to their fields.
   data HTree : Set → Set where
     Node : C as a → HList as → HTree a
 
+
   data HList : List Set → Set where
     [] : HList []
    _∷_ : HTree a → HList as → HList (a ∷ as)
 \end{minted}
-Data type \texttt{HList as} is an \emph{heterogeneous} list-like data
-structure, because contains trees of different types, namely those
-specified by the list of types \texttt{as}.
-  %
-  The type \texttt{C as a} denotes the constructor of an algebraic
-  data type of type \texttt{a} that takes arguments of types
-  determined by the list \texttt{as}.
+Data type \texttt{HList as} is an \emph{heterogeneous} list,
+containing trees of different types, namely those specified by the
+list of types \texttt{as}.
+%
+Data type \texttt{HTree a} is a tree-like data structure that represents an
+algebraic data type of type \texttt{a}.
+%
+The type \texttt{C as a} denotes the constructor of an algebraic data
+type of type \texttt{a} that takes arguments of types determined by
+the list \texttt{as}.
   %
   This representation is type-safe because the constructor
   \texttt{Node} requires the same types \texttt{as} in the fields
@@ -393,7 +418,7 @@ module Diff3 (C : List Set → Set → Set)
         \paragraph{Example} 
         The list \texttt{[1,2]} can be encoded in this universe as: 
 \begin{Verbatim}[commandchars=\\\{\}]
-hs : HList [List Int]
+hs : HTree (List Int)
 hs = Node (\textcolor{blue}{::}) [Node \textcolor{magenta}{1} [], Node (\textcolor{blue}{::}) [Node \textcolor{magenta}{2} [], Node \textcolor{blue}{[]} []]]
 \end{Verbatim}
         Where \texttt{(\textcolor{blue}{::}) : C [Int, List Int] (List Int)}
@@ -401,6 +426,18 @@ hs = Node (\textcolor{blue}{::}) [Node \textcolor{magenta}{1} [], Node (\textcol
         empty list constructor, specialized without loss of generality to the type \texttt{List Int}.
         Similarly in our examples we will automatically lift numbers to node constructors, that is
         \texttt{\textcolor{magenta}{1}, \textcolor{magenta}{2} : C [] Int}.
+
+We graphically depict it as a tree :
+
+\begin{figure}[h]
+\centering
+\Tree
+[.\texttt{(\textcolor{blue}{::})}
+   [.\texttt{\textcolor{magenta}{1}} ]
+   [.\texttt{(\textcolor{blue}{::})} [.\texttt{\textcolor{magenta}{2}} ] [.\texttt{\textcolor{blue}{[]}} ]]
+]
+\end{figure}
+
 
 	In the following we will use two auxiliary functions to append and split 
 	heterogeneous lists:
@@ -424,30 +461,42 @@ hsplit : HList (as ++ bs) → HList as × HList bs
 Val : List Set → Set → Set
 Val as a = Maybe (C as a)
 \end{minted}
-        In the type \texttt{Val as a} the parameters \texttt{as} and \texttt{a} 
-        witness the possible presence of a node \texttt{C as a}, that given objects 
-        of types \texttt{as} will produce an object of type \texttt{a}.
-        The drawback of this encoding is that \texttt{as} and \texttt{a} are 
-        valid input and output approximations only if a node is in fact present.
-        An indexed data type on the other hand, can give a much more accurate
-        approximation:
+        In the type \texttt{Val as a} the parameters \texttt{as} and
+        \texttt{a} witness the possible presence of a node \texttt{C
+          as a}, that given objects of types \texttt{as} will produce
+        an object of type \texttt{a}.
+        %
+        The drawback of this encoding is that \texttt{as} and
+        \texttt{a} are valid input and output approximations only if a
+        node is in fact present.
+        %
+        On the other hand, an indexed data type can give a much more
+        accurate approximation:
 \begin{minted}{agda}
 data Val : List Set → List Set → Set where
   ⊥ : Val [] []
   ⟨_⟩ : C as a → Val as [ a ] 
 \end{minted}
-        The data type \texttt{Val as bs} is indexed by two lists \texttt{as} and 
-        \texttt{bs} that assume only certain values, depending on the presence
-        of a node. This definition ensures that for any value \texttt{Val as bs}, 
-        the lists \texttt{as} and \texttt{bs} always accurately approximate inputs 
-        and outputs regardless of the presence of a node.
-	Namely, an empty value will consume no input and produce nothing, hence
-        both lists are empty.
-        A non-empty value contains a node \texttt{C as a} which consumes 
-        objects of types \texttt{as} and produces a single object of type \texttt{a}.
-
-	The set of edit operations considered includes a no-operation, node 
-	deletion, insertion and update.
+  The data type \texttt{Val as bs} is indexed by two lists
+  \texttt{as} and \texttt{bs} that assume only certain values,
+  depending on the presence of a node, ensuring that they always
+  accurately approximate inputs and outputs regardless of the
+  presence of a node.
+%
+  More precisely the empty value \texttt{⊥} corresponds to
+  \texttt{nothing} and since it does not consume any input and produce
+  nothing, both its lists are empty.
+%
+  Value \texttt{⟨ α ⟩} corresponds to \texttt{just α} and represents a
+  non-empty value that contains node \texttt{α : C as a} which
+  consumes objects of types \texttt{as} and produces a single object
+  of type \texttt{a}.
+%
+  The type \texttt{u ⟼ v} denotes an edit that maps \emph{source}
+  value \texttt{u} into \emph{target} value \texttt{v}.
+%
+  Edit operations includes a no-operation, node deletion, insertion
+  and update.
 \begin{minted}{agda}
 data _⟼_ : Val as bs → Val cs ds → Set where
   Nop : ⊥ ⟼ ⊥
@@ -455,22 +504,25 @@ data _⟼_ : Val as bs → Val cs ds → Set where
   Ins : (α : C as a) → ⊥ ⟼ ⟨ α ⟩
   Upd : (α : C as a) (β : C bs a) → ⟨ α ⟩ ⟼ ⟨ β ⟩
 \end{minted}
-	Edits are indexed by two values, called respectively 
-	\emph{source} and \emph{target} values. The \texttt{Nop} edit is 
-	a no-operation that is used exclusively to \emph{align} edit scripts,
-	therefore it maps the empty value into itself.
-	The edit \texttt{Del α} deletes the node \texttt{α} from the source object, 
-	thus it is mapped to \texttt{⊥}. Conversely the edit \texttt{Ins α} 
-	inserts node \texttt{α} in the target object and therefore its source value 
-	is 	\texttt{⊥}.
-	Lastly \texttt{Upd α β} denotes the update of source node \texttt{α}
-	to target node \texttt{β}, which concretely represents a 
-	constructor change. 
-	Note that there is no explicit copy edit: it is just a special case 
-	of update, in which the source and target nodes happen to be the same.
-	Edits whose source and target values are identical are 
-	called \emph{identity} edits. Copy and no-operation fall into this
-	category.
+  The \texttt{Nop} edit is a no-operation that is used exclusively to
+  \emph{align} edit scripts, therefore it maps the empty value into
+  itself.  
+%
+  Edit \texttt{Del α} deletes node \texttt{α} by mapping \texttt{⟨ α
+    ⟩} into \texttt{⊥}, conversely \texttt{Ins α} inserts node
+  \texttt{α}, by mapping \texttt{⊥} into \texttt{⟨ α ⟩}.
+%
+  Lastly \texttt{Upd α β} denotes the update of source node \texttt{α}
+  to target node \texttt{β}, concretely a constructor change, which consists in mapping \texttt{⟨ α ⟩}
+  into \texttt{⟨ β ⟩}.
+%
+  Note that there is no explicit copy edit: it is just a special case
+  of update, in which the source and target nodes happen to be the
+  same.
+%
+  Edits whose source and target values are identical are called
+  \emph{identity} edits. Copy and no-operation fall into this
+  category.
 	
 	\subsection{Edit Script}
         \label{subsec:edit-script}
@@ -493,14 +545,24 @@ data ES : List Set → List Set → Set where
         found on top of the stacks of the resulting script.
 
         \paragraph{Example}
-        The following edit script encodes the differences between \texttt{[1,2,3]} 
-        and \texttt{[\textcolor{blue}{0},1,2,3]}, the first row of the tables 
-        from the introduction:
+
+        The following edit script encodes the differences between \texttt{[0]} 
+        and \texttt{[1,2]}:
 
 \begin{Verbatim}[commandchars=\\\{\}]
 e : ES [List Int] [List Int]
-e = [\textcolor{blue}{Ins (::)} , \textcolor{blue}{Ins 0}, Upd (::) (::), Upd 1 1 ... Upd [] []]
+e = [Upd (::) (::), \textcolor{magenta}{Upd 0 1}, \textcolor{blue}{Ins (::)} , \textcolor{blue}{Ins 2}, Upd [] []]
 \end{Verbatim}
+
+The script embeds nodes from the source object into nodes of the target object.
+Figure \ref{fig:embedding} shows the embedding of \texttt{e}.
+
+\begin{figure*}[!t]
+\centering
+\includegraphics[scale=.27]{embedding2}
+\caption{The embedding induced by \texttt{[Upd (::) (::), \textcolor{magenta}{Upd 0 1}, \textcolor{blue}{Ins (::)} , \textcolor{blue}{Ins 2}, Upd [] []]}}
+\label{fig:embedding}
+\end{figure*}
 
 	The following function retrieves the source object from an edit 
         script:			
@@ -832,7 +894,7 @@ data _⊔_↥_ : (u ⟼ v) → (u ⟼ w) → Conflict u v w → Set where
         \end{prop}
 
         Now that we have established that our semantics is sensible we
-        lastly define a function that merges edits.
+        define a function that merges edits.
 
 	\paragraph{Merge Operator}
 	The binary operator \texttt{⊔} merges two aligned edits.
@@ -982,7 +1044,8 @@ diff₃ y x z | WA _ _ p = merge₃ p
         proof \texttt{p} is extracted and used to finally merge the
         scripts with \texttt{merge₃}.  Note that the call to
         \texttt{align} is valid because \texttt{diff-suff} is invoked
-        with the same \texttt{x} as first argument.
+        with the same value \texttt{x} as first argument in both its
+        arguments.
 
         \paragraph{Type Checking}
 	Even though merging might succeed without triggering any
@@ -1316,11 +1379,12 @@ Then either \texttt{f ∈ e₃} or there is a conflict \texttt{c} such that
     and then traversing recursively its subtrees from the leftmost to the rightmost.
     The traversal induces an ordering on the nodes, so that those that
     are visited sooner come before those that are processed later.
-    Since edit scripts work with list of trees, we have not to generalize the order accordingly.
+    Since edit scripts work with list of trees, we have to generalize the
+    ordering accordingly.
     
-    The type \texttt{hs ⊢ α ⊏ β} denotes that, in the list of trees \texttt{hs}, 
-    the node \texttt{α} comes before the node \texttt{β}, according to the
-    depth first traversal.
+    The type \texttt{hs ⊢ α ⊏ β} denotes that the node \texttt{α}
+    comes before the node \texttt{β}, according to depth first
+    traversal of the trees contained in the list of trees \texttt{hs}.
 
 \begin{minted}{agda}
 data _⊢_⊏_ : Hist xs → C as a → C bs b → Set where
@@ -1453,18 +1517,22 @@ the original order in the merged script.
 \end{thm}
   The theorem holds also with respect to the edits contained in \texttt{e₂}.
 
-\section{Haskell}
+\section{Example Revised}
 \label{sec:haskell}
-In this section, we implement our generic algorithm in Haskell.  The
-main reason to use Haskell over Agda is performance. 
+In this section, we revisit the motivating example from Section
+\ref{sec:intro} using our fine-grained merge algorithm and show that
+it performs better than line-based \texttt{diff3}.
 %
-Even though it does not feature full-fledged dependent types, the
-Glasgow Haskell Compiler (GHC) \cite{GHC}, the current
-state-of-the-art, optimizing compiler for Haskell, provides several
-extensions to the type system, which allow to partially simulate
-dependently typed programming.  
+Furthermore while presenting this example we show the API of the
+Haskell library that implements our algorithm.
 %
-We will point out the shortcomings compared to the original version.
+Haskell can only partially simulate dependently typed programming,
+therefore the library cannot enforce certain invariants of the
+original model, such as \emph{aligment}, which are instead checked at
+run-time.
+%
+On the other hand, the Haskell implementation has much better
+performance, an essential requirement to make our algorithm practical.
 %
 
 \subsection{Data  Representation}
@@ -1472,14 +1540,15 @@ In our model we used the abstract representation \texttt{C as a}
 for a constructor of the algebraic data type \texttt{a} which takes
 arguments \texttt{as}.
 %
-In our implementation we encode it as a Generalized Algebraic
+In the library this construct is encoded as a Generalized Algebraic
 Data Type (GADT), indexed by a list of types and a target type.
 %
 Each constructor of the algebraic data type is represented separately
 by one of its constructor, which instantiates the first index with
 the type of its arguments and the second with the resulting type.
 %
-For instance we encode the list constructors:
+\paragraph{Example}
+We encode the list constructors in \texttt{ListC}:
 \begin{minted}{haskell}
 data ListC (as :: [ * ]) (a :: *) where
   Nil :: ListC '[] [a]
@@ -1487,7 +1556,7 @@ data ListC (as :: [ * ]) (a :: *) where
 \end{minted}
 In Haskell, lists are automatically lifted to the type level and they
 both share the same syntax, hence we put a tick to distinguish lifted
-lists of kind \texttt{[ * ]} from the list type of kind \texttt{*}.
+lists of kind \texttt{[ * ]} from the type of homogeneous lists of kind \texttt{*}.
 %
 Primitive types such as integer are also encoded in a similar data
 type, but since they may assume many values, they are all combined in
@@ -1497,9 +1566,15 @@ data IntC xs a where
   I :: Int → IntC '[] Int
 \end{minted}
 
+These two encoding are sufficient for our example, in
+which we encode tables as lists of lists of integers.
+\begin{minted}{haskell}
+type Csv = [[Int]]
+\end{minted} 
+
 \subsection{Diffing}
-Since \texttt{diff3} relies on \texttt{diff} we start by defining a type class
-for types that can be diffed.
+Since \texttt{diff3} relies on \texttt{diff}, our library
+defines a type class for types that can be diffed.
 
 \begin{minted}{haskell}
 class Typeable a => Diff a where
@@ -1512,7 +1587,8 @@ class Typeable a => Diff a where
 The associated type family \texttt{Encoding a} returns the concrete
 data type that encodes the constructors of \texttt{a}.
 %
-The type synonym \texttt{F} is used to improve readability of signatures:
+The type synonym \texttt{C} is used to improve readability of signatures
+and for consistency:
 \begin{minted}{haskell}
 type C xs a = (Encoding a) xs a
 \end{minted}
@@ -1522,141 +1598,27 @@ dependencies but it is worse in end.}
 Methods \texttt{toHTree} and \texttt{fromHTree} are inverse functions
 that embed a value into and from the generic representation.
 % 
-The universe used in the implementation corresponds precisely to that
-of the model, except that it requires a \texttt{Diff} instance for
-every child of a node.
-
-\begin{minted}{haskell}
-data HList xs where
-  HNil :: HList []
-  HCons :: Diff a => HTree a → HList as → HList (a : as)
-
-data HTree a where
-  Node :: C as a → HList as → HTree a
-\end{minted}
-
-This definition automatically ensures that the whole family of mutually recursive 
-types have a \texttt{Diff} instance.
+% The universe used in the implementation corresponds precisely to that
+% of the model, except that it requires a \texttt{Diff} instance for
+% every child of a node.
 %
-Method \texttt{(=?=)} checks equality between constructors of the 
-same data type, and if so it returns a proof that their field types
-are equal.
-
-\begin{minted}{haskell}
-data a :~: b where
-  Refl :: a :~: a
-\end{minted}
-
-The superclass \texttt{Typeable} provides methods to inspect and
-compare types.
+% \begin{minted}{haskell}
+% data HList xs where
+%   HNil :: HList []
+%   HCons :: Diff a => HTree a → HList as → HList (a : as)
 %
-When merging, constructors can be compared by
-\texttt{(=?=)} only after establishing that they are both constructors
-of the same data type. 
+% data HTree a where
+%   Node :: C as a → HList as → HTree a
+% \end{minted}
 %
-The following function uses \texttt{eqT} from the \texttt{Typeable} superclass
-of \texttt{Diff} for that:
-\begin{minted}{haskell}
-(=??=) :: (Diff a, Diff b) => C xs a → C ys b → Maybe (a :~: b)
-_ =??= _ = eqT
-\end{minted}
-Note that the arguments are ignored and used exclusively to fix which
-types must be compared.
-Lastly method \texttt{distance} represents a user-customizable distance function
-between nodes, used in the \texttt{diff} algorithm's cost model.
-
-\paragraph{Example}
-As an example we give the \texttt{Diff} type class instances for list and integers,
-which alone allow to diff CSV tables, like those in the initial example.
-
-\begin{minted}{haskell}
-instance Diff a => Diff [a] where	
-  type Encoding [a] = ListF
-
-  Nil =?= Nil = Just Refl
-  Cons =?= Cons = Just Refl
-  _ =?= _ = Nothing
-
-  toHTree [] = Node Nil HNil
-  toHTree (x : xs) = Node Cons (HCons (toHTree x) hs)
-    where hs = HCons (toHTree xs) HNil
-
-  fromHTree (Node Nil HNil) = []
-  fromHTree (Node Cons (HCons t (HCons ts HNil))) 
-    = fromHTree x : fromHTree ts
-\end{minted} 
+% This definition automatically ensures that the whole family of mutually recursive 
+% types have a \texttt{Diff} instance.
 %
-Note that the instance is polymorphic, so that it can be instantiated
-with both \texttt{[Int]} and \texttt{[[Int]]}.
-
-\begin{minted}{haskell}
-instance Diff Int where
-  type Encoding Int = IntF
-
-  (I x) =?= (I y) = if x == y then Just Refl else Nothing
-  
-  toHTree x = Node (I x) HNil
-  
-  fromHTree (Node (I x) HNil) = x
-\end{minted}
-When applied to primitive types, method \texttt{=?=} needs to check that the
-actual value is equal.
-
-\paragraph{Edit Script}
-The edit script data type is similar to that of Agda, with the only difference
-that edit operations are not represented by a separate data type, but are
-embedded in its constructors.
-
-\begin{minted}{haskell}
-data ES xs ys where
-  End :: ES [] []
-  Ins :: Diff a => C xs a → ES ys (xs :++: zs) → ES ys (a ': zs)
-  Del :: Diff a => C xs a → ES (xs :++: ys) zs → ES (a ': ys) zs
-  Upd :: Diff a => C xs a → C ys a → ES (xs :++: zs) (ys :++: ws) 
-      → ES (a ': zs) (a ': ws)
-\end{minted}
-The original version cannot be translated directly to Haskell as it
-is, due to the limitations of the datatype promotion mechanism
-\cite{Yorgey12} and the absence of pi-types.  Symbol \texttt{:++:}
-denotes type-level append.
+Method \texttt{(=?=)} tests equality between constructors of the same
+data type, and if so it returns a proof that their field types are
+equal. This operator is used by the merge algorithm to dynamically
+check \emph{alignment} and to determine whether an update is just a copy.
 %
-Since there is no separate edit data type, we do not include a
-no-operation edit in the script. 
-%
-We then discuss how we recover alignment in the implementation.
-
-\paragraph{Algorithm}
-A \texttt{diff} algorithm takes as input two objects and outputs an
-edit script that reports the differences between them.
-%
-In particular GNU \texttt{diff} finds a \emph{minimal length} edit
-script, or equivalently the \emph{longest common subsequence} of its
-inputs \cite{Berg00, PierceDiff3}, that is a script which 
-copies as many lines as possible.
-%
-Our \texttt{diff} algorithm is mostly an extension of that of
-Lempsink's et al.\ therefore we present here only the principal
-differences.  
-%
-
-\paragraph{Cost Model}
-The original \texttt{diff} algorithm produces edit scripts
-that contain only delete, insert and copy operations.
-%
-The original cost model is straightforward and assign cost 1 to every
-edit, hence preferring copy edits over an equivalent insert and delete.
-%
-In this paper we have generalized copy to update, therefore we have to
-adjust the cost model accordingly.
-
-\begin{minted}{haskell}
-cost : ES as bs → Dobule
-cost (Del x e) = 1 + cost e
-cost (Ins y e) = 1 + cost e
-cost (Upd x y e) = distance x y + cost e 
-cost End = 0
-\end{minted}
-
 The function \texttt{distance} computes the cost of an update between
 constructors of the same type and it is expected to be a
 \emph{metric}.
@@ -1681,188 +1643,137 @@ data type constructors is the \emph{discrete distance}:
 			1 \quad &\mbox {otherwise}		
 		\end{cases} \]	
 %
+Lastly the superclass \texttt{Typeable} provides methods to inspect and
+compare types at run-time.
+The \texttt{diff} and \texttt{diff3} algorithms use its methods respectively 
+to check whether two constructors are of the same data type
+and to type-check a merged edit script.
 
-The binary operator \texttt{\_⨅\_} selects the edit script that minimizes \texttt{cost}.
-\begin{minted}{agda}
-(⨅) : ES as bs → ES as bs → ES as bs
-e₁ ⨅ e₂ = if cost e₁ ≤ cost e₂ then e₁ else e₂
-\end{minted}
+\paragraph{Example}
+Diffing tables requires only a \texttt{Diff} instance for integers
+and one for lists.
+In fact given the \texttt{Diff} instance for the content type, we can
+derive a \texttt{Diff} instance for lists of them.
 
-We show a short, yet naive, version of the \texttt{diff} algorithm for simplicity,
-furthermore we extend list syntax to heterogeneous lists for clarity:
 \begin{minted}{haskell}
-diff : HList as → HList bs → ES as bs
-diff [] [] = End
-diff [] (Node β ys₁ ∷ ys₂) = Ins β $ diff [] (ys₁ +++ ys₂)
-diff (Node α xs₁ ∷ xs₂) [] = Del α $ diff (xs₁ +++ xs₂) []
-diff (Node α xs₁ ∷ xs₂) (Node β ys₁ ∷ ys₂) =
-  let d = Del α $ diff (xs₁ +++ xs₂) (Node β ys₁ ∷ ys₂) 
-      i = Ins β $ diff (Node α xs₁ ∷ xs₂) (ys₁ +++ ys₂) in
-    case α =??= β of
-      Nothing → d ⨅ i
-      Just Refl → d ⨅ i ⨅ u
-        where u = Upd α β $ diff (xs₁ +++ xs₂) (ys₁ +++ ys₂)
-\end{minted}
-In the first case both input lists and the script is completed with
-\texttt{End}.
-%
-In the second and third case one of the two lists is empty, hence the
-algorithm inserts (deletes) each remaining node from the other list.
-%
-The third case, when both lists are non-empty, is the most
-interesting.
-%
-Either the first node can be deleted, or the second node can be
-inserted, or, if the nodes have the same target type, tested by
-\texttt{=??=}, the first node can be updated with the second.
-%
-In each case the rest of the edit script is computed recursively,
-prepending to either list the children of a node.
-%
-Lastly the script that minimizes the cost function is selected 
-using \texttt{⨅}.
-%
-This version of the algorithm is naive because it is very inefficient,
-since it contains several recursive calls that perform the same
-sub-computations multiple times.
-%
-In our implementation we have employed memoization to achieve
-practical performance \cite{Lemp09}.
+instance Diff a => Diff [a] where	
+  type Encoding [a] = ListF
 
-We conclude with the entry point of our data type generic diff algorithm.
+  Nil =?= Nil = Just Refl
+  Cons =?= Cons = Just Refl
+  _ =?= _ = Nothing
+
+  toHTree [] = Node Nil HNil
+  toHTree (x : xs) = Node Cons (HCons (toHTree x) hs)
+    where hs = HCons (toHTree xs) HNil
+
+  fromHTree (Node Nil HNil) = []
+  fromHTree (Node Cons (HCons t (HCons ts HNil))) 
+    = fromHTree x : fromHTree ts
+
+  distance Nil Nil = 0
+  distance Cons Cons = 0
+  distance _ _ = 1
+\end{minted} 
+%
+The \texttt{Diff Int} is straightforward:
 \begin{minted}{haskell}
-gdiff : (Diff a, Diff b) => a → b → ES '[ a ] '[ b ]
-gdiff x y = diff [ toHTree x ] [ toHTree y ] 
+instance Diff Int where
+  type Encoding Int = IntF
+
+  (I x) =?= (I y) = if x == y then Just Refl else Nothing
+  
+  toHTree x = Node (I x) HNil
+  
+  fromHTree (Node (I x) HNil) = x
+
+  distance (I x) (I y) = if x == y then 0 else 1
 \end{minted}
-The objects to be diffed are converted to the generic tree
-representation and inserted in a singleton heterogeneous list, which
-are then compared using \texttt{diff}.
-
-\subsection{Merging}
-Merging consists in diffing the base version with respect to each
-new version, producing two edit scripts that are combined
-following the three-way merge technique. The merge may fail either
-due to some conflict or because it generates an ill-typed 
-script. 
-
-\paragraph{Conflict}
-The conflict data type encodes why it is not possible to merge two edits:
-\begin{minted}{haskell}
-data Conflict where
-  InsIns :: (Diff a, Diff b) => C xs a → C ys b → Conflict
-  UpdDel :: Diff a => C xs a → C ys a → Conflict
-  DelUpd :: Diff a => C xs a → C ys a → Conflict
-  UpdUpd :: Diff a => C xs a → C ys a → C zs a → Conflict
-\end{minted}
-
-The data type is much simpler compared to the model: it is not indexed
-by the base and new values.  This is mainly because the data promotion
-mechanism prevents GADTs from being indexed from other GADTs.
-
-\paragraph{Merged Script}
-The \texttt{ES3 xs} data type represents a merged edit script, which
-may contain conflicts.
-\begin{minted}{haskell}
-data ES3 xs where
-  End3 :: ES3 '[] 
-  Cnf3 :: Conflict → ES3 xs → ES3 ys
-  Ins3 :: Diff a => C xs a → ES3 ys → ES3 ys
-  Del3 :: Diff a => C xs a → ES3 (xs :++: ys) → ES3 (a ': ys) 
-  Upd3 :: Diff a => C xs a → C ys a 
-         → ES3 (xs :++: zs) → ES3 (a ': zs) 
-\end{minted}
-The script is well-typed with respect to the input list simplifying
-type checking, since only the output types have to be checked.
+When applied to primitive types, method \texttt{=?=} needs to check that the
+actual values are in fact equal.
 %
-The only exception is the constructor \texttt{Cnf3}, which does not
-retain enough type information to maintain this property.
+Tables are just lists of list of integers, so that the same list
+\texttt{Diff} instance is used twice, once to derive \texttt{Diff
+  [Int]} from \texttt{Diff Int} and then to automatically derive
+\texttt{Diff [[Int]]} from it.
 %
-Likely this is not an issue: a script containing a conflict
-is already ill-typed, according to the rules given in \ref{subsec:diff3-algo}.
-%
-
-\paragraph{Alignment}
-Due to the lack of proper dependent types unaligned scripts are
-not automatically ruled out when merging, therefore they have to
-be handled explicitly.
-%
-The following auxiliary functions tests equality between nodes
-and throws an error if this is not the case.
-\begin{minted}{haskell}
-aligned :: (Diff a, Diff b) => C xs a → C ys b → (xs :~: ys , a :~: b)
-aligned a b =
-  case a =??= b of
-    Just Refl →  
-      case a =?= b of
-        Just Refl → (Refl, Refl)
-        _ → error "Scripts not aligned"
-\end{minted}
-Note that this check bears also some type equality, essential to
-make the merge algorithm type check.
+In both the instances we used \emph{discrete distance}, however
+depending on the specific domain more fine grained distance measure
+could be used to get more precise diffs.
 
 \paragraph{Algorithm}
-Since no alignment proof is available, the merge algorithm needs to
-check alignment every time two edits with a non-empty source value
-needs to be merged.
-As an example consider the update versus update case:
+A  \texttt{diff} algorithm takes as input two objects and outputs an
+edit script that reports the differences between them.
+%
+In particular GNU \texttt{diff} finds a \emph{minimal length} edit
+script, or equivalently the \emph{longest common subsequence} of its
+inputs \cite{Berg00, PierceDiff3}, that is a script which 
+copies as many lines as possible.
+%
+Our library detects differences between two values by means of function \texttt{gdiff}:
 \begin{minted}{haskell}
-merge3 :: ES xs ys → ES xs zs → ES3 xs
-merge3 (Upd o x e1) (Upd o' y e2) =
-  case aligned o o' of
-    (Refl, Refl) →
-      case (o =?= x, o' =?= y, x =?= y) of
-        (Just (Refl, Refl), _, _) → Upd3 o y (merge3 e1 e2) -- Id1
-        (_, Just (Refl, Refl), _) → Upd3 o x (merge3 e1 e2) -- Id2
-        (_, _, Just (Refl, Refl)) → Upd3 o x (merge3 e1 e2) -- Idem
-        (_, _, _) → Cnf3 (UpdUpd o x y) (merge3 e1 e2)
+gdiff :: (Diff a, Diff b) => a → b → ES '[ a ] '[ b ]
 \end{minted}
-Even though in the signature the two scripts share the same source list
-\texttt{xs}, the two nodes \texttt{o} and \texttt{o'} might represent
-different constructors with distinct arguments and types:
-the alignment check guarantees that this is not the case.
 %
-The merging algorithm checks then whether either the first or the
-second edit are actual copies or whether both of them update the nodes
-in the same way, leading to a merge, or otherwise to an update
-conflict.
+Our \texttt{diff} algorithm is mostly an extension of that of
+Lempsink's et al.\ therefore we omit it.
 %
+We only remark that we have adjusted the definition of edit script length,
+in order to take into account update edits, whose cost is given
+by the \texttt{distance} function.
+%
+As a result in the new algorithm using \emph{discrete distance},
+a single update edit is preferred to a delete and a subsequent insert.
+%
+\paragraph{Patch}
+Our library provides also a \texttt{patch} function, which corresponds to
+the target function \texttt{⟦\_⟧} of the model.
+\begin{minted}{haskell}
+patch :: ES xs ys → HList ys
+\end{minted}
 
-\paragraph{Type Checking}
-In our implementation the type checking phase either
-yields a well-typed edit script or a list of type errors and conflicts
-of the script. We omit its implementation for brevity:
-\begin{minted}{haskell}
-tyCheck :: ES3 xs → Either [Conflict] (WES xs)
-\end{minted}
-The auxiliary data type \texttt{WES} represents a well-typed edit script 
-with source list \texttt{xs}.
-\begin{minted}{haskell}
-data WES xs where
-  WES :: ES xs ys → WES xs
-\end{minted}
-Note that we need it, because we have to existentially quantify over the output
-list \texttt{ys}.
+We remark that contrary to that of Lempsink's \cite{Lemp09} the function
+is total and furthermore does not need the source object to compute the
+target object, since the edit script alone contains all the information
+necessary to reconstruct it.
 
-We conclude by giving the interface of a data type generic \texttt{diff3} algorithm.
+\subsection{Merging}
+Merging consists in diffing the base version with respect to each new
+version, producing two edit scripts that are combined following the
+three-way merge technique.
+%
+The merge may fail either due to some conflict or because it generates
+an ill-typed script.
+%
+Our library merges objects in this way by means of the function \texttt{gdiff3}:
 \begin{minted}{haskell}
-gdiff3 :: Diff a => a → a → a → Either [Conflict] (ES '[ a ] '[ a ])
-gdiff3 x o y = 
-  let e = merge3 (diff o x) (diff o y) in
-    case tyCheck e of 
-     Left cs → Left cs
-     Right (WES e') → hasRightTarget e'
+gdiff3 :: (Diff a, Diff b) => b → a → b → 
+                                 Either [Conflict] (ES '[ a ] '[ b ])
 \end{minted}
-The new versions are diffed with the original version and their edit
-scripts merged.  
-%
-Our formal model guarantees that scripts generated from the same source 
-object are aligned, therefore we are ensured that \texttt{merge3} will not crash.
-%
-Conflicts are reported directly, while if the merged script is
-well-typed we have to check that it does in fact generate an object of the
-correct type.  The function \texttt{hasRightTarget}, omitted, takes
-care of that.
- 
+
+\paragraph{Example}
+Variables \texttt{a}, \texttt{b} and \texttt{c} represent the tables
+of the introduction:
+\begin{minted}{haskell}
+a, b, c :: [[Int]]
+a = [[1,2,3],
+      [4,5,6],
+      [7,8,9]]
+b = map (0 :) a
+c = [[1,2,3],
+      [4,5,9],
+      [7,8,15]]
+\end{minted}
+
+Merging them using \texttt{gdiff3} succeeds and gives the expected table:
+\begin{verbatim}
+Main> let Right e = gdiff3 b a c
+Main> patch e
+[[0,1,2,3], [0,4,5,9], [0,7,8,15]]
+\end{verbatim}
+
+
+
 % \subsection{Example}
 % Interactive session with initial example revised.
 
@@ -2055,7 +1966,7 @@ to analyze.
 % deleted trees are optionally considered conflicts contradicts this
 % rule and weaken the property about preservation of edits.
 
-\section{Conclusion}
+\section{Conclusion and Future Work}
 \label{sec:conclusion}
 We present a state-based, three-way, persistent, data type generic
 \texttt{diff3} algorithm for typed algebraic data type.
@@ -2070,8 +1981,9 @@ use it to prove several properties about our algorithm allowing
 users to reason about complex merge operations.
 %
 We have released an efficient version of our algorithm as an Haskell
-library making it possible to put our results into practice, embedded
-in application such as VCS.
+library, with promising results.
+We plan to evaluate our algorithm on real world data as future work.
+%
 
 
 % We achieve a better precision in detecting changing 
