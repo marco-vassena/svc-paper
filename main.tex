@@ -385,7 +385,7 @@ paper, for instance by hiding implicit arguments and universe levels.
 \todo{This paper is organized as follows}
 
 \section{Universe}
-Data type generic algorithms requires a generic representation of
+Data type generic algorithms work on a generic representation of
 algebraic data types.
 %
 The universe used in this paper consists of typed heterogeneous rose
@@ -401,45 +401,42 @@ their children to their fields.
     [] : HList []
    _∷_ : HTree a → HList as → HList (a ∷ as)
 \end{minted}
-Data type \texttt{HList as} is an \emph{heterogeneous} list,
-containing trees of different types, namely those specified by the
-list of types \texttt{as}.
+In Agda, \texttt{Set} is the kind of simple types and \texttt{List
+  Set} is the type of a list of simple types.
 %
 Data type \texttt{HTree a} is a tree-like data structure that represents an
 algebraic data type of type \texttt{a}.
 %
-The type \texttt{C as a} denotes the constructor of an algebraic data
-type of type \texttt{a} that takes arguments of types determined by
-the list \texttt{as}.
-  %
-  This representation is type-safe because the constructor
-  \texttt{Node} requires the same types \texttt{as} in the fields
-  types and in the list of subtrees, hence it forms a well-typed
-  application of a constructor to its arguments.
-  % 
-  We will show in Section \ref{sec:haskell} how to instantiate
-  \texttt{C} with concrete data types. In the model we will just leave
-  it abstract as a module parameter.  We furthermore assume an
-  equality operator for it.
+Type \texttt{C as a} denotes a constructor of an algebraic data type
+of type \texttt{a}, that takes arguments of types given by the list
+\texttt{as}.
+%
+Data type \texttt{HList as} is an \emph{heterogeneous} list,
+containing a typed tree for each type in list \texttt{as}.
+%
+This representation is type-safe because constructor \texttt{Node}
+ensures that the constructor and the heterogeneous list share the same
+index \texttt{as}, therefore denoting a well-typed application of a
+constructor to its arguments.
+% 
 
-\begin{minted}{agda}
-module Diff3 (C : List Set → Set → Set) 
-              (_≟_ : (α : C as a) (β : C bs b) → Dec (α ≡ β)) where
-\end{minted}
-	
-        \paragraph{Example} 
-        The list \texttt{[1,2]} can be encoded in this universe as: 
+\paragraph{Example}
+List \texttt{[1,2]} is encoded in this universe as:
 \begin{Verbatim}[commandchars=\\\{\}]
 hs : HTree (List Int)
 hs = Node (\textcolor{blue}{::}) [Node \textcolor{magenta}{1} [], Node (\textcolor{blue}{::}) [Node \textcolor{magenta}{2} [], Node \textcolor{blue}{[]} []]]
 \end{Verbatim}
-        Where \texttt{(\textcolor{blue}{::}) : C [Int, List Int] (List Int)}
-        and \texttt{\textcolor{blue}{[]} : C [] (List Int)} are the reification of respectively the cons constructor and the
-        empty list constructor, specialized without loss of generality to the type \texttt{List Int}.
-        Similarly in our examples we will automatically lift numbers to node constructors, that is
-        \texttt{\textcolor{magenta}{1}, \textcolor{magenta}{2} : C [] Int}.
-
-We graphically depict it as a tree :
+Where \texttt{(\textcolor{blue}{::}) : C [Int, List Int] (List Int)}
+and \texttt{\textcolor{blue}{[]} : C [] (List Int)} are the
+reification of the cons constructor and the empty list constructor
+respectively, specialized without loss of generality to \texttt{List
+  Int}.
+%
+In our examples we automatically lift numbers to node constructors,
+that is \texttt{\textcolor{magenta}{1}, \textcolor{magenta}{2} : C []
+  Int}.
+%
+We graphically depict objects encoded in this universe as trees:
 
 \begin{figure}[h]
 \centering
@@ -450,9 +447,19 @@ We graphically depict it as a tree :
 ]
 \end{figure}
 
+We will show in Section \ref{sec:haskell} how to concretely
+instantiate \texttt{C} with specific data types, in the following
+model we will just leave it abstract as a module parameter, together
+with a decidable heterogeneous equality operator.
 
-	In the following we will use two auxiliary functions to append and split 
-	heterogeneous lists:
+\begin{minted}{agda}
+module Diff3 (C : List Set → Set → Set) 
+              (_≟_ : (α : C as a) (β : C bs b) → Dec (α ≅ β)) where
+\end{minted}
+	
+\todo{Move later?}
+In the following we will use two auxiliary functions to append and
+split heterogeneous lists:
 \begin{minted}{agda}
 _+++_ : HList as → HList bs → HList (as ++ bs)
 hsplit : HList (as ++ bs) → HList as × HList bs
