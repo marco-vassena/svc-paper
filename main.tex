@@ -173,26 +173,26 @@ Diff3, Dependent types, Datatype-generic programming
 
 \section{Introduction}
 \label{sec:intro}
-Version control systems (VCS) such as Git \cite{Git} and Mercurial
-\cite{Mercurial} are used in the software industry, as well as in the
+Version control systems, such as Git \cite{Git} and Mercurial
+\cite{Mercurial}, are used in the software industry, as well as in the
 open source community and by researchers all over the world to develop
-software.  These tools track all the changes in the source code
-throughout its development, making it possible to quickly roll back to
-any previous version.
+software.
 %
-Furthermore, developers can simultaneously work on the same project and
-use a VCS to merge their changes together.
+These tools track all the changes in the source code throughout its
+development, making it possible to quickly roll back to any previous
+version and allow different developers to work separately on the same
+project.
 %
-VCS provide these features by means of two algorithms, called
-\texttt{diff} and \texttt{diff3}.
+Version control systems provide these features by means of two
+algorithms, called \texttt{diff} and \texttt{diff3}.
 %
 The former detects changes in source code files, while the latter
 merges independent changes made to the code base, allowing
 simultaneous development.
 %
 These algorithms are line-based, i.e.\ they compare files line by
-line, and not only can be used on software artifacts, but also with
-any text-based file.
+line, therefore they can be used on any text-based file, not
+exclusively on software artifacts.
 %
 Unfortunately, their line-granularity limits their precision when
 detecting changes, which consequently deteriorates their merging
@@ -201,18 +201,21 @@ capabilities.
 In this paper, we develop a fine-grained data-type generic version of
 the \texttt{diff} and \texttt{diff3} algorithms, that improve their
 applicability and whose increased precision in detecting changes
-reduces the number of spurious conflicts raised and results more
-specific true conflicts.
+reduces the number of spurious conflicts raised and produces more
+accurate true conflicts.
 
 \paragraph{Example}
-We show the shortcomings of the line-based \texttt{diff} and
-\texttt{diff3} algorithms by means of an example.  The Comma Separated
-Values file format (CSV) is a simple text-based encoding of data
-stored in tables. %b \cite{csv}.
-In a CSV file, every line represents a row of the table and within
-each row commas separate values in different columns.  For instance,
-file \texttt{a.csv} encodes a $3 \times 3$ table containing numbers
-from 1 to 9.
+We show the shortcomings of line-based \texttt{diff} and
+\texttt{diff3} algorithms by means of an example.  
+%
+The Comma Separated Values file format (CSV) is a simple text-based
+encoding of data stored in tables. %b \cite{csv}.
+%
+In a CSV file, every line represents a row of the table and commas
+separate values in different columns, within each row.
+%
+For instance, file \texttt{a.csv} encodes a $3 \times 3$ table
+containing numbers from 1 to 9.
 \begin{figure}[!h]
 \centering
 \begin{minipage}{.15\textwidth}
@@ -291,10 +294,12 @@ They have modified \emph{independent} parts of the table, therefore
 they are confident that it is should be possible to automatically
 merge the changes, without incurring in a conflict.
 %
-Unfortunately, \texttt{diff3} is a line-based algorithm which compares
-files line by line, without considering the actual structure of the
-data stored in the files. As a result, the algorithm fails to merge the
-two tables and raises spurious conflicts.
+Unfortunately, since \texttt{diff3} is a line-based algorithm, it
+compares files line by line, without considering the actual structure
+of the data stored in the files. 
+%
+As a result, the algorithm fails to merge the two tables and raises
+spurious conflicts.
 %
 In particular, \texttt{diff3} employs the \emph{three-way-merge}
 technique to compare and merge the corresponding lines of three files.
@@ -310,20 +315,25 @@ previous tables:
 \texttt{\textcolor{blue}{0},7,8,9} & \texttt{7,8,9} & \texttt{7,8,\textcolor{magenta}{15}} & \textcolor{red}{✗} \\ \hline
 \end{tabular}
 \end{center}
-A merge is possible when there is at most one different version of the same line, as it happens in the first row.
-A conflict is instead triggered when the same line is different in all the three versions, which is the case in the second and third row.
+If there is at most one different version of the same line, as it
+happens in the first row, a merge is possible.
+%
+Instead, if the same line is different in all the three versions,
+which is the case in the second and third row, a conflict is
+triggered.
+%
 
 
 \paragraph{Discussion}
-The main limitation of \texttt{diff3} and \texttt{diff} is that they
-operate on data representation with a \emph{fixed} precision consisting of
-one line of text, therefore disregarding completely any information
-about the actual structure of the data.
+The main limitation of \texttt{diff} and \texttt{diff3} is that they
+operate on data representation with a \emph{fixed} precision,
+consisting of one line of text, therefore disregarding completely any
+information about the actual structure of the data.
 %
-If \texttt{diff} and \texttt{diff3} were aware of the table structure,
-consisting of columns and rows, then \texttt{diff} could exactly
-represent the differences in each version and \texttt{diff3} could
-automatically merge them, as the users expected:
+If they were aware of the table structure, consisting of columns and
+rows, then \texttt{diff} could exactly represent the differences in
+each version and \texttt{diff3} could automatically merge them, as the
+users expected:
 \begin{center}
 \begin{tabular}{| c | c | c | c |}
 \hline
@@ -372,10 +382,11 @@ algorithms, their properties and formal proofs are available
 online\footnote{https://github.com/marco-vassena/gdiff3}.  For the
 sake of presentation, we have simplified the code presented in this
 paper, for instance by hiding implicit arguments and universe levels.
+\todo{This paper is organized as follows}
 
 \section{Universe}
-In order to implement data type generic algorithms, we need a generic
-representation of algebraic data types.
+Data type generic algorithms requires a generic representation of
+algebraic data types.
 %
 The universe used in this paper consists of typed heterogeneous rose
 trees, a combination of mutually recursive heterogeneous lists and
