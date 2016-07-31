@@ -38,7 +38,7 @@
 \usepackage[dvipsnames]{xcolor}  		% Color package
 \definecolor{dgreen}{rgb}{0.,0.6,0.}    % Deep green
 \usepackage{caption}
-\usepackage[disable]{todonotes}	% todos
+\usepackage[colorinlistoftodos,prependcaption,textsize=tiny]{todonotes}	% todos
 
 % Figures with border
 \usepackage{float}
@@ -208,10 +208,14 @@ reduces the number of spurious conflicts raised and results more
 specific true conflicts.
 
 \paragraph{Example}
-We show the shortcomings of the line-based \texttt{diff} and \texttt{diff3} algorithms by means of an example.
-The Comma Separated Values file format (CSV) is a simple text-based encoding of data stored in tables. %b \cite{csv}.
-In a CSV file, every line represents a row of the table and within each row commas separate values in different columns.
-For instance the file \texttt{a.csv} encodes a $3 \times 3$ table containing numbers from 1 to 9.
+We show the shortcomings of the line-based \texttt{diff} and
+\texttt{diff3} algorithms by means of an example.  The Comma Separated
+Values file format (CSV) is a simple text-based encoding of data
+stored in tables. %b \cite{csv}.
+In a CSV file, every line represents a row of the table and within
+each row commas separate values in different columns.  For instance,
+file \texttt{a.csv} encodes a $3 \times 3$ table containing numbers
+from 1 to 9.
 \begin{figure}[!h]
 \centering
 \begin{minipage}{.15\textwidth}
@@ -290,12 +294,12 @@ They have modified \emph{independent} parts of the table, therefore
 they are confident that it is should be possible to automatically
 merge the changes, without incurring in a conflict.
 %
-Unfortunately \texttt{diff3} is a line-based algorithm which compares
+Unfortunately, \texttt{diff3} is a line-based algorithm which compares
 files line by line, without considering the actual structure of the
-data stored in the files. As a result the algorithm fails to merge the
+data stored in the files. As a result, the algorithm fails to merge the
 two tables and raises spurious conflicts.
 %
-In particular \texttt{diff3} employs the \emph{three-way-merge}
+In particular, \texttt{diff3} employs the \emph{three-way-merge}
 technique to compare and merge the corresponding lines of three files.
 %
 The following table shows the result of applying this technique to the
@@ -366,10 +370,10 @@ our algorithms in Haskell \cite{Marlow_haskell2010}.
 % compromises that we had to make when moving from a language with 
 % dependent types to a less expressive one.
 %
-The source code containing the \texttt{diff} and \texttt{diff3}
+The source code containing \texttt{diff} and \texttt{diff3}
 algorithms, their properties and formal proofs are available
 online\footnote{https://github.com/marco-vassena/gdiff3}.  For the
-sake of presentation we have simplified the code presented in this
+sake of presentation, we have simplified the code presented in this
 paper, for instance by hiding implicit arguments and universe levels.
 
 \section{Universe}
@@ -378,7 +382,7 @@ representation of algebraic data types.
 %
 The universe used in this paper consists of typed heterogeneous rose
 trees, a combination of mutually recursive heterogeneous lists and
-trees whose \emph{nodes} correspond to data type constructors and
+trees, whose \emph{nodes} correspond to data type constructors and
 their children to their fields.
 \begin{minted}{agda}
   data HTree : Set → Set where
@@ -447,7 +451,7 @@ hsplit : HList (as ++ bs) → HList as × HList bs
 \end{minted}
 	
 \section{Generic diff}
-	Our \texttt{diff3} algorithm relies on a \texttt{diff} algorithm used 
+	Our \texttt{diff3} algorithm relies on a \texttt{diff} algorithm, used 
         as a subroutine to quickly compare the input objects and merge them.
 	The algorithm finds the differences between two heterogeneous lists given 
 	as input producing an edit script, whose edit operations progressively 
@@ -518,7 +522,7 @@ data _⟼_ : Val as bs → Val cs ds → Set where
 %
   Note that there is no explicit copy edit: it is just a special case
   of update, in which the source and target nodes happen to be the
-  same.
+  same. \todo{Why? Explain!}
 %
   Edits whose source and target values are identical are called
   \emph{identity} edits. Copy and no-operation fall into this
@@ -527,7 +531,7 @@ data _⟼_ : Val as bs → Val cs ds → Set where
 	\subsection{Edit Script}
         \label{subsec:edit-script}
 	An edit script collects a finite number of edit operations, 
-	while preserving type-safety. 
+	while preserving type-safety. \todo{Explain more!}
 \begin{minted}{agda}
 data ES : List Set → List Set → Set where
   [] : ES [] []
@@ -547,7 +551,7 @@ data ES : List Set → List Set → Set where
         \paragraph{Example}
 
         The following edit script encodes the differences between \texttt{[0]} 
-        and \texttt{[1,2]}:
+        and \texttt{[1,2]}: \todo{Use figure?}
 
 \begin{Verbatim}[commandchars=\\\{\}]
 e : ES [List Int] [List Int]
@@ -576,17 +580,24 @@ Figure \ref{fig:embedding} shows the embedding of \texttt{e}.
 ⟪ Upd α β ∷ e ⟫ with hsplit ⟪ e ⟫
 ... | hs₁ , hs₂ = Node α hs₁ ∷ hs₂
 \end{minted}
-	No-operations and insert edits do not affect the source object,
-	because their source value is empty, therefore in these cases the source 
-	function is simply called recursively.
-	On the other hand delete and update edits alter a node of the
-	source object by either removing it or changing it.
-	In these two cases such node is output as part of the source object.
-	The source function is called recursively on the rest of the edit 
-	script producing a list, whose prefix correspond to the subtrees of the
-	top node. Using the function \texttt{hsplit} the list is decomposed 
-	accordingly in two parts, which are then assembled appropriately.
-	
+	No-operations and insert edits have no source node,
+        because their source value is empty ⊥, therefore
+        the source function is simply called on the tail
+        of the script.
+        %        
+        Delete and update edits instead alter a node of the source
+        object, therefore that node is output as part of the source
+        object.
+        %
+        \todo{Stress on well-typedness of the construction!  HList is
+          not just a mere list, but a list of trees!}
+        %
+        The source function is called recursively on the rest of the
+        edit script producing a list, whose prefix correspond to the
+        subtrees of the top node. Using the function \texttt{hsplit}
+        the list is decomposed accordingly in two parts, which are
+        then assembled appropriately.
+	%
 	Dually we define a function that retrieves the target object.
 	Since it is analogous to the previous we give only its signature:
 	
@@ -596,8 +607,9 @@ Figure \ref{fig:embedding} shows the embedding of \texttt{e}.
 
 \subsection{Diff Algorithm}
 \label{subsec:diff-algo}
-The \texttt{diff} algorithm detects differences between
-two objects and has the the following signature:
+The \texttt{diff} algorithm detects differences between two objects
+and has the the following signature: \todo{Discussion about
+  specifications, not minimal to accommodate more diffs}
 \begin{minted}{agda}
 diff : HList as → HList bs → ES as bs
 \end{minted}
@@ -622,6 +634,7 @@ bound to a particular \texttt{diff} algorithm when studying the
 properties of \texttt{diff3}, so that arbitrary diffing techniques can
 be used.
 %
+\todo{Drop Diff}
 The following data type serves to this purpose: \texttt{Diff x y e} is
 the proof that the edit script \texttt{e} is the result of diffing
 lists \texttt{x} and \texttt{y}.
@@ -661,13 +674,16 @@ diff-suff :  (x : HList xs) (y : HList ys) → Diff x y (diff x y)
 	However the algorithm does not work directly on the replicas, but relies
 	on a \texttt{diff} algorithm to compute two edit scripts that describe
 	the changes from base to each of the new versions.
-	It then merges the edits contained in the two edit scripts and produce
+	It then merges the edits contained in the two edit scripts and produces
 	an edit script, whose \emph{source} is the base object and whose 
 	\emph{target} is the merged object.
 	Nevertheless, not all edits can be automatically reconciled.
 	In these cases a conflict is detected and reported to the user, who has
 	to solve it manually.
+        \todo{More discussion about different design choices, persistent etc ...}
 		
+        \todo{Remark that the three-way technique is attractive and
+          we simply want to apply it to structured data. Maybe in intro?}
 	The merging technique employed in the \texttt{diff3} algorithm for
 	algebraic data types consists in applying the three-way merge algorithm
 	at the node level. 
@@ -683,6 +699,8 @@ diff-suff :  (x : HList xs) (y : HList ys) → Diff x y (diff x y)
 
 	\subsection{Alignment}
         \label{subsec:alignment}
+        \todo{Explain: why do we even need alignment?}
+        \todo{Add proper definition of alignment, drop data-type}
 	We call two edit operations \emph{aligned} if they share the
         same \emph{source} value.
         %
@@ -742,6 +760,7 @@ e₂ = [Cpy (::), Cpy 1, Ins  (::), Ins  2, Cpy []]
 e₁* = [Ins (::), Ins 0, Cpy (::), Cpy 1, Nop   , Nop , Cpy []]
 e₂* = [Nop   , Nop , Cpy (::), Cpy 1, Ins (::), Ins 2, Cpy []] 
 \end{minted}
+        \todo{Proper definition of \texttt{⊴} and proper symbol}
         The relation \texttt{e ⊴ e*} denotes that the edit script
         \texttt{e*} extends \texttt{e} with a finite number of
         \texttt{Nop} edits.
@@ -759,8 +778,8 @@ No-operations are automatically aligned with inserts because they both
 share the empty value \texttt{⊥} as \emph{source} and furthermore they
 may not introduce spurious conflicts because they are \emph{identity}
 edits.
-   
-        \paragraph{Weak Alignment}
+         
+        \paragraph{Weak Alignment}\todo{Drop weak alignment, give only Proposition}
         Two edit scripts are \emph{weakly aligned} \texttt{e₁ \textasciitilde\ e₂} 
         if they admit extensions that are \emph{aligned}:
 \begin{minted}{agda}
@@ -778,6 +797,7 @@ align : Diff x y e₁ → Diff x z e₂ → e₁ ~ e₂
 
 	\subsection{Merge Semantics}
         \label{subsec:merge-semantics}
+        \todo{Mention that implements the three-way merge}
 	Our merge semantics is defined over aligned edits.
 	Two aligned edits contain at most three distinct values: 
 	one common source and two, 	possibly different, targets, which 
@@ -786,8 +806,9 @@ align : Diff x y e₁ → Diff x z e₂ → e₁ ~ e₂
 	an edit that combines both.
 	
 	\paragraph{Merge}
-	The data type \texttt{f ⊔ g ↧ h} is the proof that merging the 
-	aligned edits \texttt{f} and \texttt{g} succeeds producing the edit \texttt{h}.
+	Data type \texttt{f ⊔ g ↧ h} is the proof that merging aligned
+        edits \texttt{f} and \texttt{g} succeeds producing the edit
+        \texttt{h}.
 	
 \begin{minted} {agda}
 data _⊔_↧_ : (v ⟼ a) → (v ⟼ b) → (v ⟼ c) → Set where
@@ -822,7 +843,8 @@ data _⊔_↧_ : (v ⟼ a) → (v ⟼ b) → (v ⟼ c) → Set where
 	A conflict occurs when two edits perform irreconcilable changes.
 	The following data type represents the possible conflicts that may arise
 	from aligned edits.
-	
+	\todo{Drop data type, discuss only generically what conflicts
+              are possible}
 \begin{minted}{agda}
 data Conflict : Val as bs → Val cs ds → Val es fs → Set where
   DelUpd : (α : C as a) (β : C bs a) → Conflict ⟨ α ⟩ ⊥ ⟨ β ⟩
@@ -897,6 +919,7 @@ data _⊔_↥_ : (u ⟼ v) → (u ⟼ w) → Conflict u v w → Set where
         define a function that merges edits.
 
 	\paragraph{Merge Operator}
+        \todo{No Signature, prose / definition}
 	The binary operator \texttt{⊔} merges two aligned edits.
         % 
         For every pair of edits \texttt{f} and \texttt{g}, it either
@@ -973,7 +996,7 @@ data ES₃ : List Set → Set where
 	applies the merge operator \texttt{⊔} previously defined to
 	each pair of aligned edits. It builds a merged edit script choosing a 
 	suitable constructor depending on the outcome of each single merge.
-
+        \todo{Define this as zipWith (⊔) e1 e2}
 \begin{minted}{agda}
 merge₃ : {e₁ : ES as bs} {e₂ : ES as cs} → e₁ ⋎ e₂ → ES₃ as
 merge₃ nil = []
@@ -996,6 +1019,7 @@ _⊔₃_  _ _ {{p}} = merge₃ p
 
 % \begin{figure*}[t!]
 % \centering
+\todo{Drop Merge3}
 \begin{minted}{agda}
 data Merge₃ : ES xs ys → Es xs zs → ES₃ xs → Set where
   nil : Merge₃ [] [] []
@@ -1027,6 +1051,7 @@ relies on properties \ref{prop:mutually-exclusive} and \ref{prop:determinancy}.
         properties.
 
 	\paragraph{Diff3}
+        \todo{Less details, more intuition, both in code and explanations}
 	We finally give a generic \texttt{diff₃} algorithm for
         heterogeneous lists.
         %
@@ -1048,6 +1073,9 @@ diff₃ y x z | WA _ _ p = merge₃ p
         arguments.
 
         \paragraph{Type Checking}
+        \todo{Typed-version of diff3, 
+              no-conflict /-> well-typed example,
+              discussion about finding type signature}
 	Even though merging might succeed without triggering any
         conflict the merged edit script might be invalid, i.e.\ it will
         not produce a well-typed object as \emph{target}.
@@ -1101,6 +1129,7 @@ e₃ = [Ins [], Ins []]
 
 \section{Properties}
 \label{sec:properties}
+\todo{Why do we want properties?}
 In this section we present several properties of our merge algorithm,
 all of which have been verified in Agda using the model presented in
 this paper.  
@@ -1121,7 +1150,7 @@ to nodes in heterogeneous lists \texttt{α ∈ hs}.
     The type \texttt{e₁ ⊔₃ e₂ ↥ c} denotes that aligned edit scripts
     \texttt{e₁} and \texttt{e₂} will raise conflict \texttt{c} if
     merged and precisely captures these circumstances.
-
+    \todo{Drop data type!}
 \begin{minted}{agda}
 data _⊔₃_↥_ : ES xs ys → ES xs zs → Conflict u v w → Set where
   here :  f ⊔ g ↥ c → (f ∷ e₁) ⊔₃ (g ∷ e₂) ↥ c
@@ -1141,7 +1170,7 @@ data _⊔₃_↥_ : ES xs ys → ES xs zs → Conflict u v w → Set where
 
     The following theorem shows that a conflict occurs in a merged script
     if and only if there are two aligned conflicting edits in the input scripts.
-    
+    \todo{Stress why this is good! No bugs, clear explanation etc...}
 \begin{thm}[Conflict Conditions]
   Let \texttt{e₁} and \texttt{e₂} be two aligned edit scripts
   and let \texttt{e₃ = e₁ ⊔₃ e₂}, then \texttt{c ∈ e₃} if and only if
@@ -1168,6 +1197,7 @@ data _⊔₃_↥_ : ES xs ys → ES xs zs → Conflict u v w → Set where
 %     because these two cases are mutually exclusive.    
 
     \subsection{Safety}
+    \todo{More intuition and explanation, less details}
     The safety properties discussed in this section act as a sanity
     check, ensuring that \texttt{diff} and \texttt{diff3} behave
     properly.
@@ -1325,6 +1355,7 @@ Then either \texttt{f ∈ e₃} or there is a conflict \texttt{c} such that
     the proof is entirely symmetrical.
    		
     \subsection{Maximality}
+    \todo{Not interesting, but desirable! cite Pierce}
     Another interesting property of our merge algorithm is
     \emph{maximality}, which guarantees that whenever it is possible
     to reconcile two edits from the input scripts, then the merged
@@ -1350,6 +1381,11 @@ Then either \texttt{f ∈ e₃} or there is a conflict \texttt{c} such that
     \end{thm}
 
     \subsection{Structural  Invariants}
+    \todo{Start with the problem: with structured data, there
+    nodes could be rearranged in arbitrary ways to avoid conflicts.
+    The structural invariant specifies how nodes can be rearranged.
+    Why do we want this specific one?}
+    
     An edit script describes how to transform the source object into
     the target object, by traversing it in \emph{depth-first order}
     and mapping source nodes into target nodes.
@@ -1385,7 +1421,7 @@ Then either \texttt{f ∈ e₃} or there is a conflict \texttt{c} such that
     The type \texttt{hs ⊢ α ⊏ β} denotes that the node \texttt{α}
     comes before the node \texttt{β}, according to depth first
     traversal of the trees contained in the list of trees \texttt{hs}.
-
+    \todo{Probably drop data type. Better notation?}
 \begin{minted}{agda}
 data _⊢_⊏_ : Hist xs → C as a → C bs b → Set where
   here : β ∈ (hs₁ +++ hs₂) → Node α hs₁ ∷ hs₂ ⊢ α ⊏ β
@@ -1447,7 +1483,7 @@ such that \texttt{e ⊢ f ⊏ g}.
   By Proposition \ref{prop:data-retention} it follows that there
   exists \texttt{g : v ⟼ ⟨ β ⟩} in the tail of \texttt{e}.
 \end{proof}
-We again omit the corresponding property for \emph{source} nodes and object.
+We again omit the dual property for \emph{source} nodes and object.
 
     % We now have all the lemmas to prove the \emph{order invariant}
     % theorem, which ensures that the edit script data type preserves
@@ -1506,6 +1542,7 @@ The property holds intuitively because the merge algorithm does not
 rearrange the input edits, but rather merge them pointwise, retaining
 the original order in the merged script.
 %
+\todo{Better! Give me a take home message!}
 \begin{thm}[\texttt{diff₃} is OP]
   Let \texttt{e₁}, \texttt{e₂} and \texttt{e₃} be edit scripts such
   that \texttt{e₁ ⋎ e₂}, \texttt{e₃ = e₁ ⊔₃ e₂} and \texttt{e₃} does not
@@ -1528,7 +1565,7 @@ Haskell library that implements our algorithm.
 %
 Haskell can only partially simulate dependently typed programming,
 therefore the library cannot enforce certain invariants of the
-original model, such as \emph{aligment}, which are instead checked at
+original model, such as \todo{In particular} \emph{aligment}, which are instead checked at
 run-time.
 %
 On the other hand, the Haskell implementation has much better
@@ -1554,6 +1591,7 @@ data ListC (as :: [ * ]) (a :: *) where
   Nil :: ListC '[] [a]
   Cons :: ListC '[a , [a]] [a]
 \end{minted}
+\todo{Explain the constructors!!!}
 In Haskell, lists are automatically lifted to the type level and they
 both share the same syntax, hence we put a tick to distinguish lifted
 lists of kind \texttt{[ * ]} from the type of homogeneous lists of kind \texttt{*}.
@@ -1705,7 +1743,7 @@ could be used to get more precise diffs.
 A  \texttt{diff} algorithm takes as input two objects and outputs an
 edit script that reports the differences between them.
 %
-In particular GNU \texttt{diff} finds a \emph{minimal length} edit
+In particular, GNU \texttt{diff} finds a \emph{minimal length} edit
 script, or equivalently the \emph{longest common subsequence} of its
 inputs \cite{Berg00, PierceDiff3}, that is a script which 
 copies as many lines as possible.
@@ -1722,8 +1760,8 @@ We only remark that we have adjusted the definition of edit script length,
 in order to take into account update edits, whose cost is given
 by the \texttt{distance} function.
 %
-As a result in the new algorithm using \emph{discrete distance},
-a single update edit is preferred to a delete and a subsequent insert.
+When using \emph{discrete distance}, a single update edit is preferred
+to a delete and a subsequent insert.
 %
 \paragraph{Patch}
 Our library provides also a \texttt{patch} function, which corresponds to
@@ -1745,21 +1783,39 @@ three-way merge technique.
 The merge may fail either due to some conflict or because it generates
 an ill-typed script.
 %
-Our library merges objects in this way by means of the function \texttt{gdiff3}:
+Our library merges objects in this way by means of function \texttt{gdiff3}:
 \begin{minted}{haskell}
-gdiff3 :: (Diff a, Diff b) => b → a → b → 
-                                 Either [Conflict] (ES '[ a ] '[ b ])
+gdiff3 :: Diff a => a → a → a → Either [Conflict] (ES '[ a ] '[ a ])
+gdiff3 x o y = typecheck $ merge e1 e2
+  where e1 = diff [ toHTree o ] [ toHTree x ]
+         e2 = diff [ toHTree o ] [ toHTree y ]
 \end{minted}
+The input objects are transformed in our generic encoding by \texttt{toHTree}
+and diffed with respect to the original version.
+%
+For the sake of brevity we are lifting list syntax to heterogeneous lists,
+so that \texttt{[ toHTree o ] :: HList '[ a ]} is a singleton list
+containing the \texttt{HTree a} representation of \texttt{o}.
+%
+Edit scripts \texttt{e₁} and \texttt{e₂} are merged by function
+\texttt{merge}, that implements the merge operator \texttt{⊔₃},
+producing a merged edit script that is lastly typechecked by function
+\texttt{typecheck}.
+%
 
 \paragraph{Example}
 Variables \texttt{a}, \texttt{b} and \texttt{c} represent the tables
-of the introduction:
+of the example from the introduction:
 \begin{minted}{haskell}
-a, b, c :: [[Int]]
+a :: Csv
 a = [[1,2,3],
       [4,5,6],
       [7,8,9]]
+
+b :: Csv
 b = map (0 :) a
+
+c :: Csv
 c = [[1,2,3],
       [4,5,9],
       [7,8,15]]
@@ -1795,6 +1851,25 @@ synchronization \cite{Ramsey01}.
 Lastly some mergers are tailored exclusively on software artifacts
 \cite{Westfechtel91, Mens02, Apel11}. 
 
+\paragraph{Diff}
+Merging relies on a \texttt{diff} algorithm to detect changes between
+objects, which are then to be merged according to some strategy.
+%
+Our \emph{edit script} is inspired by Lempsink's \cite{Lemp09}, but
+employs a more general notion of \emph{edit}, a mapping between
+values, which enables reasoning about merge and conflict.
+%
+While Lempsink's \texttt{diff} algorithm finds a \emph{minimal length}
+edit script, ours uses a \emph{cost} measure, which is parametric in
+the \texttt{distance} function used to weight updates.  
+%
+We both employ similar trees and heterogeneous list, but our
+constructor representation handles also \emph{polymorphic}
+data types such as lists, while their approach requires 
+to encode families of mutually recursive data-types
+at once, furthermore only with fully instantiated types.
+Our representation is instead modular and reusable.
+
 \paragraph{Ordered and Unordered Data} 
 The merge algorithm presented in this paper works on algebraic data
 types, which are strongly typed, tree-like, ordered objects. File
@@ -1817,7 +1892,7 @@ do not usually mark their content, furthermore even XML trees
 might not have identifiers in their nodes.
 	
 \paragraph{Alignment and Data Structures} 
-Alignment of corresponding parts plays a central role in when merging
+Alignment of corresponding parts plays a central role when merging
 two objects. 
 %
 In this work the alignment is \emph{global} and mainly determined by
@@ -1856,7 +1931,7 @@ name, therefore it is able to merge correctly unordered collections
 such as records and sets.
 %
 Our algorithm struggle with unordered data structures, 
-because it will treat them as structured.
+because it treats them as structured.
 %
 On the other hand Harmony performs poorly with lists, because
 it \emph{align} them by absolute position.
@@ -1903,7 +1978,7 @@ systems, with the notable exception of Darcs \cite{HomoPatchTheory,
 empirically, leading to severe misconceptions \cite{PierceDiff3}.
 %
 For instance it is in general hard to predict the outcome of complex
-merges and determine whether a conflict is indeed due to or the
+merges and determine whether a conflict is indeed true or the
 consequence of a bug.
 %
 Furthermore, even when merges are successful, they might produce
@@ -1976,13 +2051,15 @@ precisely, leading to more specific edit scripts and ultimately
 reducing the number of spurious conflicts raised in merges and
 improving the quality of automatic reconciliation.
 %
-We formalize the semantics of merge and conflict in Agda and
+We have formalized the semantics of merge and conflict in Agda and
 use it to prove several properties about our algorithm allowing
 users to reason about complex merge operations.
 %
 We have released an efficient version of our algorithm as an Haskell
-library, with promising results.
-We plan to evaluate our algorithm on real world data as future work.
+library.
+%
+Moved from our promising results, we plan to perform a rigorous evaluation
+of our algorithm on real world data as future work.
 %
 
 
@@ -2021,7 +2098,7 @@ We plan to evaluate our algorithm on real world data as future work.
 %  ----         ------  ----    ------
 
 %  2013.06.29   TU      0.1--4  comments on permission/copyright notices
-
+]
 
 %%% Local Variables: 
 %%% coding: utf-8
