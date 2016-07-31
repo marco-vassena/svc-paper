@@ -385,6 +385,7 @@ paper, for instance by hiding implicit arguments and universe levels.
 \todo{This paper is organized as follows}
 
 \section{Universe}
+\label{section:universe}
 Data type generic algorithms work on a generic representation of
 algebraic data types.
 %
@@ -450,8 +451,8 @@ application of a constructor to its arguments.
 \paragraph{Example}
 List \texttt{[1,2]} is encoded in this universe as:
 \begin{Verbatim}[commandchars=\\\{\}]
-hs : HTree (List Int)
-hs = Node (\textcolor{blue}{::}) [Node \textcolor{magenta}{1} [], Node (\textcolor{blue}{::}) [Node \textcolor{magenta}{2} [], Node \textcolor{blue}{[]} []]]
+ht : HTree (List Int)
+ht = Node (\textcolor{blue}{::}) [Node \textcolor{magenta}{1} [], Node (\textcolor{blue}{::}) [Node \textcolor{magenta}{2} [], Node \textcolor{blue}{[]} []]]
 \end{Verbatim}
 Where \texttt{(\textcolor{blue}{::}) : C [Int, List Int] (List Int)}
 and \texttt{\textcolor{blue}{[]} : C [] (List Int)} denote the cons
@@ -581,25 +582,85 @@ semantics.
 %
 \todo{An implementation should take care of this. Do we?}
 	
-	\subsection{Edit Script}
-        \label{subsec:edit-script}
-	An edit script collects a finite number of edit operations, 
-	while preserving type-safety. \todo{Explain more!}
-\begin{minted}{agda}
-data ES : List Set → List Set → Set where
-  [] : ES [] []
-  _::_ : {v : Val as bs} {w : Val cs ds} → v ⟼ w → 
-          ES (as ++ xs) (cs ++ ys) → ES (bs ++ xs) (ds ++ ys)
-\end{minted}	
-	An edit script of type \texttt{ES xs ys} transforms
-	a \emph{source} object of type \texttt{HList xs} into
-	a \emph{target} object of type \texttt{HList ys}. 
-        The indexes of the edit script are used as stacks by respectively the 
-        \emph{source} and \emph{target} values of each edit contained in the script.
-        This encoding is type-safe because the input list of the \emph{source} and 
-        \emph{target} values are present on top of respectively the input and output 
-        stack of the remaining script and their output lists are 
-        found on top of the stacks of the resulting script.
+\subsection{Edit Script}
+\label{subsec:edit-script}
+An edit script is a finite list of edit operations, that describe how
+to transform a \emph{source} object into a \emph{target} object.
+%
+The objects are not plain trees, but rather \emph{lists} of trees,
+which are used as \emph{stacks} of unprocessed nodes, pushed and
+popped according to the edit operations found in the script.
+%
+We work with lists of trees because certain edits, when applied to
+nodes in a tree, will intrinsically result in multiple trees.
+%
+For instance, deleting the root node to tree \texttt{ht} from Section
+\ref{section:universe} will produce two trees (\texttt{Node
+  \textcolor{magenta}{1} []} and \texttt{Node (\textcolor{blue}{::})
+  [Node \textcolor{magenta}{2} [], Node \textcolor{blue}{[]} []]}):
+
+\begin{figure}[h!]
+\centering
+  \begin{minipage}{.15\textwidth}
+  \centering
+    \Tree
+    [.\texttt{\textcolor{magenta}{1}} ]
+  \end{minipage}%
+%
+\begin{minipage}{.15\textwidth}
+  \centering
+    \Tree
+    [.\texttt{(\textcolor{blue}{::})} [.\texttt{\textcolor{magenta}{2}} ]     
+    [.\texttt{\textcolor{blue}{[]}} ]]
+\end{minipage}%
+\end{figure}
+
+More precisely each tree in the source and target stacks is traversed
+and consumed in depth-first preorder by the edits of the script. 
+%
+Informally, a delete (insert) edit pops the root of the tree from the
+top of the \emph{source} (\emph{target}) stack and pushes its children
+instead.
+%
+An update edit pops and pushes from both stacks and a no-operation
+edit leave both stacks unchanged.
+%
+In principle it should be possible to retrieve the source and target
+objects from a script, by inverting the process that we have just
+described.
+%
+Unfortunately an un-typed edit script does not guarantee that its
+operations will produce well-typed tree and not even that they can
+be performed at all.
+%
+For instance the top of the stack might contain trees of the wrong
+type, that do not match those of the constructor at hand, or it might
+try to pop trees from an empty stack.
+%
+Guaranteeing such invariants is the bread and butter of
+dependently-typed programming, as we proceed to show in the next
+section.
+
+\todo{Type-safe version}
+
+%  while
+% preserving type-safety. \todo{Explain more!}
+
+% \begin{minted}{agda}
+% data ES : List Set → List Set → Set where
+%   [] : ES [] []
+%   _::_ : {v : Val as bs} {w : Val cs ds} → v ⟼ w → 
+%           ES (as ++ xs) (cs ++ ys) → ES (bs ++ xs) (ds ++ ys)
+% \end{minted}	
+% 	An edit script of type \texttt{ES xs ys} transforms
+% 	a \emph{source} object of type \texttt{HList xs} into
+% 	a \emph{target} object of type \texttt{HList ys}. 
+%         The indexes of the edit script are used as stacks by respectively the 
+%         \emph{source} and \emph{target} values of each edit contained in the script.
+%         This encoding is type-safe because the input list of the \emph{source} and 
+%         \emph{target} values are present on top of respectively the input and output 
+%         stack of the remaining script and their output lists are 
+%         found on top of the stacks of the resulting script.
 
         \paragraph{Example}
 
