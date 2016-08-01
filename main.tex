@@ -742,7 +742,6 @@ valid with any function of type \texttt{diff : HList as → HList bs →
   \texttt{x} and \texttt{y} \center{\texttt{e = diff x y ⇔ x ≡ ⟪ e ⟫ ∧
       y ≡ ⟦ e ⟧}}
 \end{req}
-  % specifications, not minimal to accommodate more diffs}
 %
 This correctness criterion demands that the edit script computed by
 \texttt{diff} transform exactly the source object \texttt{x} into the
@@ -1072,9 +1071,10 @@ _⊔_ : (f : u ⟼ v) (g : u ⟼ w) →
 Operator \texttt{⊔} is outlined in Table \ref{table:merge}, where we
 have omitted the obvious inequalities in conflicts.
 %
-Operator \texttt{⊔₃} merges \emph{aligned} edit scripts, by applying
-operator \texttt{⊔} pairwise, i.e.\ \texttt{e₁ ⊔₃ e₂ = zipWith (⊔) e₁
-  e₂}.
+Operator \texttt{⊔₃} merges \emph{aligned} edit scripts\footnote{We
+  extend edit script with a special constructor \_::ᶜ\_ for
+  conflicts}, by applying operator \texttt{⊔} pairwise, i.e.\
+\texttt{e₁ ⊔₃ e₂ = zipWith (⊔) e₁ e₂}.
  
 %
 
@@ -1312,8 +1312,8 @@ expect \texttt{e₁ ⊔₃ e₂} to produce the same result as \texttt{e₂ ⊔�
 %
 An existential type, i.e. \texttt{∃ ws . ES xs ws} is too ``general''.
 In order to add an edit, say \texttt{Ins α}, with \texttt{α : C as a},
-\texttt{ws} should have prefix \texttt{as}, i.e.\ \texttt{ws ≡ as ++
-  ws'}, but \texttt{ws} is just \emph{some} list.
+list \texttt{ws} should have prefix \texttt{as}, i.e.\ \texttt{ws ≡ as
+  ++ ws'}, but \texttt{ws} is just \emph{some} list.
 %
 Unfortunately, we acknowledge that our \texttt{diff3} algorithm may
 fail in yet another way, besides proper conflicts, that is by
@@ -1321,90 +1321,88 @@ producing an ill-typed script.
 
 \section{Properties}
 \label{sec:properties}
-\todo{Why do we want properties?}
-In this section we present several properties of our merge algorithm,
-all of which have been verified in Agda using the model presented in
-this paper.  
 %
-In the following, we will write \texttt{f ∈ e} to denote that edit
-\texttt{f} occurs in script \texttt{e}.
+The multitude of works in change detection and data reconciliation
+\cite{...} shows that a variety of different design choices are
+possible, when implementing diffing and merging algorithms, each
+leading to fundamental differences and tread-offs between precision,
+performance and reliability.
 %
-Furthermore We generalize membership to conflicts \texttt{c ∈ e} and
-to nodes in heterogeneous lists \texttt{α ∈ hs}.
+In this section we present and motivate our design choices, while in
+Section \ref{sec:related-work}, we discuss and compare them with
+possible alternatives.
+%
+We show that our algorithms meet these choices, by defining properties
+that clearly describe their semantics.
+%
+We remark that we have formalized and mechanically verified these
+properties in Agda, using the model presented in this paper.
+%
+In the following, we will write \texttt{f ∈ e} and \texttt{c ∈ e} to
+denote that edit \texttt{f} and conflict \texttt{c} occurs in script
+\texttt{e} respectively and \texttt{α ∈ hs} if node \texttt{α}
+occurs in list \texttt{hs}.
+%
+Furthermore we consider only edit-related conflicts \texttt{c :
+  Conflict u v w}.
   
-    \subsection{Conflict}  
-    In order to reason about complex merge operations, we have studied
-    what are the minimal conditions that will trigger a conflict.
-    %
-    Merging two scripts will result in a conflict if they contain at
-    least a pair of aligned edits that may not be merged.  
-    %
-    The type \texttt{e₁ ⊔₃ e₂ ↥ c} denotes that aligned edit scripts
-    \texttt{e₁} and \texttt{e₂} will raise conflict \texttt{c} if
-    merged and precisely captures these circumstances.
-    \todo{Drop data type!}
-\begin{minted}{agda}
-data _⊔₃_↥_ : ES xs ys → ES xs zs → Conflict u v w → Set where
-  here :  f ⊔ g ↥ c → (f ∷ e₁) ⊔₃ (g ∷ e₂) ↥ c
-  there : e₁ ⊔₃ e₂ ↥ c → (f ∷ e₁) ⊔₃ (g ∷ e₂) ↥ c
-\end{minted}
-
-    % In order to show that these are truly the minimal conditions to get a conflict,
-    % we define a data type that denotes that a merged edit script contains a 
-    % conflict. 
-
-% \begin{minted}{agda}
-% data _∈ᶜ_ (c : Conflict u v w) : ES₃ xs → Set where
-%   here : c ∈ᶜ (c ∷ᶜ e)
-%   there : c ∈ᶜ e → c ∈ᶜ f ∷ e
-%   thereᶜ : c ∈ᶜ e → c ∈ᶜ (c' ∷ᶜ e)
-% \end{minted}
-
-    The following theorem shows that a conflict occurs in a merged script
-    if and only if there are two aligned conflicting edits in the input scripts.
-    \todo{Stress why this is good! No bugs, clear explanation etc...}
+\subsection{Conflict Conditions}
+The semantics of widespread merging algorithms, such as GNU
+\texttt{diff3} is not mathematically formalized, but it is rather
+approximately understood either empirically, and sometime largely
+misunderstood, due to incorrect intuitions \cite{PierceDiff3}.
+%
+As a result, users often struggle to predict the outcome of complex
+merge operations and end up facing unexpected conflicts.
+%
+The following property document precisely sufficient and necessary
+conditions, that will trigger a conflict in a merge.
+%
 \begin{thm}[Conflict Conditions]
-  Let \texttt{e₁} and \texttt{e₂} be two aligned edit scripts
-  and let \texttt{e₃ = e₁ ⊔₃ e₂}, then \texttt{c ∈ e₃} if and only if
-  \texttt{e₁ ⊔₃ e₂ ↥ c}.
+\label{thm:conflict-conds}
+  Given objects \texttt{o}, \texttt{x}, \texttt{y}, 
+  then \texttt{diff3 x o y} raises a conflict \texttt{c} if and only if
+  there are two aligned edits \texttt{f} and \texttt{g}, such that
+  \texttt{f ∈ (diff o x)}, \texttt{g ∈ (diff o y)}, and \texttt{f ⊔ g ↥ c}.
 \end{thm}
+Informally, Theorem \ref{thm:conflict-conds} asserts that merging
+results in a conflict uniquely if there are two edits that are
+\emph{aligned} and \emph{conflicting}.
+%
+The conflict and merge semantics, described in Section
+\ref{subsec:merge-semantics} makes Theorem very intuitive and easy to
+prove, but this does not diminish its importance.
+%
+For instance, a direct consequence of Theorem \ref{thm:conflict-conds}
+is a sound \emph{locality} principle for \texttt{diff3}, which
+guarantees that modifying independent, i.e. \emph{unaligned}, parts,
+will not trigger any conflict.
+%
+Note that the same principle in GNU \texttt{diff3}, has been only
+recently clarified and precisely formalized \cite{PierceDiff3}.
 
-    % the presence of a conflict in a merged
-    % edit script can be explained by the condition \texttt{e₁ ⊔₃ e₂ ↥ c}, i.e.\
-    % that \texttt{e₁} and \texttt{e₂} contain two conflicting edits.
-
-
-% \begin{minted}{agda}
-%     Merge₃ e₁ e₂ e₃    ∧    c ∈ᶜ e₃    ⇒    e₁ , e₂ ↥ c
-% \end{minted}
-%     The proof follows immediately by induction.
-%     Conversely we show that \texttt{e₁ , e₂ ↥ c} implies the presence
-%     of a conflict in their merged edit script.
-% \begin{minted}{agda}
-%     Merge₃ e₁ e₂ e₃    ∧    e₁ , e₂ ↥ c     ⇒    c ∈ᶜ e₃
-% \end{minted}
-%     The proof also follow from induction. Note that we can discharge the paradoxical
-%     base case in which the same edits are merged (\texttt{f ⊔ g ↧ h}) in 
-%     \texttt{Merge₃ e₁ e₂ e₃} and not (\texttt{f ⊔ g ↥ c}) in \texttt{e₁ , e₂ ↥ c},
-%     because these two cases are mutually exclusive.    
-
-    \subsection{Safety}
-    \todo{More intuition and explanation, less details}
-    The safety properties discussed in this section act as a sanity
-    check, ensuring that \texttt{diff} and \texttt{diff3} behave
-    properly.
-    %
-    Firstly, we show \emph{data origin}, which ensures that every source
-    and target node found in an edit script belong respectively to the
-    source and target object diffed.  
-    %
-    Secondly, we show the converse property \emph{data retention}, which 
-    guarantees that every node found in source and target object is
-    processed in the diff and mapped in the edit script.
-    %
-    We start with some auxiliary definitions and lemmas.
-    % Firstly we give some auxiliary definitions that will be used to state and prove
-    % this properties.
+\subsection{Sanity Conditions}
+The properties discussed in this section act as sanity conditions,
+ensuring that \texttt{diff} and \texttt{diff3} behave properly.
+%
+Firstly, the \emph{data origin} property ensures that \texttt{diff}
+processes every node of the input objects and only those, i.e.\ it
+does not ``make up'' nodes.
+%
+Intuitively nodes are atomic blocks that cannot be modified, but
+either inserted, replaced or discarded as a whole, ensuring users that
+their data may not corrupted in the diffing process.
+%
+Secondly, the \emph{edit origin} property gives further guarantees
+about the semantics of merge, namely that there is at least one script
+accountable for every edit found in a merged script ---both scripts
+may bear the same change independently (axiom \texttt{Idem}).
+%
+%
+%We start with some auxiliary definitions and lemmas.
+% Firstly we give some auxiliary definitions that will be used to
+% state and prove
+% this properties.
 %     \paragraph{Membership}
 %     The type \texttt{α ∈ hs} denotes that the node \texttt{α} is present
 %     in the list of trees \texttt{hs}.
@@ -1414,22 +1412,19 @@ data _⊔₃_↥_ : ES xs ys → ES xs zs → Conflict u v w → Set where
 %   here : (α : C as a) → α ∈ Node α hs₁ ∷ hs₂
 %   there : α ∈ (hs₁ +++ hs₂) → α ∈ Node β hs₁ ∷ hs₂
 % \end{minted}
-
 %     A similar data type denotes the presence of an edit in a script.
-
 % \begin{minted}{agda}
 % data _∈ₑ_ : v ⟼ w → ES xs ys → Set where
 %   here : (f : v ⟼ w) → f ∈ₑ f ∷ e
 %   there : f ∈ₑ e → f ∈ₑ g ∷ e
 % \end{minted}
-
     % Lastly the judgment \texttt{e ⊢ₑ u ⟼ v} denotes that
     % the script \texttt{e} contains some edit of type \texttt{u ⟼ v}.
-\begin{definition}[Edit Mapping]
-An edit script \texttt{e} maps source value \texttt{u} into
-target value \texttt{v}, written \texttt{e ⊢ u ⟼ v}, if and
-only if there is an edit \texttt{f : u ⟼ v} such that \texttt{f ∈ e}.
-\end{definition}
+% \% begin{definition}[Edit Mapping]
+% An edit script \texttt{e} maps source value \texttt{u} into
+% target value \texttt{v}, written \texttt{e ⊢ u ⟼ v}, if and
+% only if there is an edit \texttt{f : u ⟼ v} such that \texttt{f ∈ e}.
+% \end{definition}
 
 % I think I will skip this one and directly state the more interesting one
 % \begin{minted}{agda}
@@ -1437,71 +1432,79 @@ only if there is an edit \texttt{f : u ⟼ v} such that \texttt{f ∈ e}.
 %    ∀   f : v ⟼ ⟨ α ⟩  .  f ∈ₑ e   ⇒   α ∈ ⟦ e ⟧
 % \end{minted}
 
-The following property shows that in an edit script a source (target)
-node is correctly part of the source (target) object.
-%
-In other words the source function \texttt{⟪\_⟫} and target function
-\texttt{⟦\_⟧} do not forget any node.
-\begin{prop}[\texttt{⟪\_⟫} and \texttt{⟦\_⟧} are correct]
-\label{prop:source-target-cmp}
-Given an edit script \texttt{e} and a node \texttt{α} then.
-If \texttt{e ⊢ ⟨ α ⟩ ⟼ v} then \texttt{α ∈ ⟪ e ⟫}.
-Similarly if \texttt{e ⊢ v ⟼ ⟨ α ⟩} then \texttt{α ∈ ⟦ e ⟧}.
+% The following property shows that in an edit script a source (target)
+% node is correctly part of the source (target) object.
+% %
+% In other words the source function \texttt{⟪\_⟫} and target function
+% \texttt{⟦\_⟧} do not forget any node.
+% \begin{prop}[\texttt{⟪\_⟫} and \texttt{⟦\_⟧} are correct]
+% \label{prop:source-target-cmp}
+% Given an edit script \texttt{e} and a node \texttt{α} then.
+% If \texttt{e ⊢ ⟨ α ⟩ ⟼ v} then \texttt{α ∈ ⟪ e ⟫}.
+% Similarly if \texttt{e ⊢ v ⟼ ⟨ α ⟩} then \texttt{α ∈ ⟦ e ⟧}.
+% \end{prop}
+We now formally state the \emph{data origin} and \emph{edit origin} property.
+\begin{prop}[Data and Edit Origin]
+Let \texttt{α} be a node and \texttt{e = diff x y}:
+\begin{itemize}
+\item \texttt{α ∈ x} iff there exits \texttt{f : ⟨ α ⟩ ⟼ v}, such that
+  \texttt{f ∈ e}.
+\item \texttt{α ∈ y} iff there exits \texttt{f : v ⟼ ⟨ α ⟩}, such that
+  \texttt{f ∈ e}.
+\item If \texttt{f ∈ (e₁ ⊔₃ e₂)} then either \texttt{f ∈ e₁} or
+  \texttt{f ∈ e₂}.
+\end{itemize}
 \end{prop}
 
-We now formally state the \emph{data origin} property.
-\todo{Here I am assuming a diff that satisfies our specification. Is it clear?}
-\begin{prop}[Data Origin]
-Let \texttt{x} and \texttt{y} be two heterogeneous lists, let \texttt{e = diff x y}
-and let \texttt{α} be a node.
-If \texttt{e ⊢ ⟨ α ⟩ ⟼ v} then \texttt{α ∈ x}. Similarly if \texttt{e ⊢ v ⟼ ⟨ α ⟩}
-then \texttt{α ∈ y}.
-\end{prop}    
-\begin{proof}
-  It follows directly from Requirement \ref{req:diff-specs} and Proposition
-  \ref{prop:diff-correct} (requirements and specifications of
-  \texttt{diff}) and Proposition \ref{prop:source-target-cmp}.
-\end{proof}
+% \begin{proof}
+%   It follows directly from Requirement \ref{req:diff-specs} and Proposition
+%   \ref{prop:diff-correct} (requirements and specifications of
+%   \texttt{diff}) and Proposition \ref{prop:source-target-cmp}.
+% \end{proof}
 
-We now formally state the \emph{data retention} property.
-\begin{prop}[Data Retention]
-\label{prop:data-retention}
-  Let \texttt{x} and \texttt{y} be two heterogeneous lists, let
-  \texttt{e = diff x y} and let \texttt{α} be a node.
-%
-  If \texttt{α ∈ x} then there is a target value \texttt{v} such that
-  \texttt{e ⊢ ⟨ α ⟩ ⟼ v}.
-%
-  Similarly if \texttt{α ∈ y} then there is a source value \texttt{v} such that
-  \texttt{e ⊢ v ⟼ ⟨ α ⟩}.
-\end{prop}
-\begin{proof}
-  It follows from Requirement \ref{req:diff-specs} and Proposition
-  \ref{prop:diff-correct} (requirements and specifications of
-  \texttt{diff}) and by induction on \texttt{α ∈ x}.
-\end{proof}
+% We now formally state the \emph{data retention} property.
+% \begin{prop}[Data Retention]
+% \label{prop:data-retention}
+%   Let \texttt{x} and \texttt{y} be two heterogeneous lists, let
+%   \texttt{e = diff x y} and let \texttt{α} be a node.
+% %
+%   If \texttt{α ∈ x} then there is a target value \texttt{v} such that
+%   \texttt{e ⊢ ⟨ α ⟩ ⟼ v}.
+% %
+%   Similarly if \texttt{α ∈ y} then there is a source value \texttt{v} such that
+%   \texttt{e ⊢ v ⟼ ⟨ α ⟩}.
+% \end{prop}
+% \begin{proof}
+%   It follows from Requirement \ref{req:diff-specs} and Proposition
+%   \ref{prop:diff-correct} (requirements and specifications of
+%   \texttt{diff}) and by induction on \texttt{α ∈ x}.
+% \end{proof}
  
-  We give now similar safety properties for our \texttt{diff₃} algorithm.
-  We firstly discuss \emph{edit origin}, a generalization of \emph{data origin}
-  that ensures that every edit present in the merged script comes from either 
-  of the input scripts. We then conclude with  \emph{persistence}, an important 
-  theorem that guarantees that no changes of either version are ignored when
-  the scripts are merged.
+% We give now similar safety properties for our \texttt{diff₃}
+% algorithm.
+% We firstly discuss \emph{edit origin}, a generalization of
+% \emph{data origin}
+% that ensures that every edit present in the merged script comes from
+% either
+% of the input scripts.
 
-\begin{prop}[Edit Origin]
-Let \texttt{e₁}, \texttt{e₂}, \texttt{e₃} be scripts such that
-\texttt{e₁ ⋎ e₂} and \texttt{e₃ = e₁ ⊔₃ e₂}. Let \texttt{f} be an edit.
-If \texttt{f ∈ e₃} then either \texttt{f ∈ e₁} or \texttt{f ∈ e₂}.
-\end{prop}
-\begin{proof}
-  It follows directly from Property \ref{prop:merge3-correct}
-  (correctness of \texttt{⊔₃}) and by induction.
-\end{proof}
+\subsection{Persistence}
+Persistence is a property that establishes how conflicting edits,
+e.g.\ \texttt{⊥ ⟼ ⟨ \textcolor{magenta}{1} ⟩} and \texttt{⊥ ⟼ ⟨
+  \textcolor{magenta}{2} ⟩}, should be handled during merging.
+%
+Persistence promises to \emph{never} back out user's changes, hence it
+gives up \emph{convergence}, i.e.\ the guarantee to produce a merged
+object, and raises a conflict when it is not possible to soundly merge
+edits \cite{Pierce07}.
+%
+Inspired by GNU \texttt{diff3}, we have opted for \emph{persistence}:
+Theorem \ref{thm:persistence} proves that \texttt{⊔₃} is persistent.
 
-  We now formally state and prove that our merge algorithm is \emph{persistent}.
-  This property is very important because conflicts are triggered by changes,
-  hence a non-persistent algorithm could back-out changes to avoid raising
-  conflicts.
+% We now formally state and prove that our merge algorithm is
+% \emph{persistent}.  This property is very important because conflicts
+% are triggered by changes, hence a non-persistent algorithm could
+% back-out changes to avoid raising conflicts.
 
     % \paragraph{Persistence}
     % The converse property asserts that an edit present in one of the input
@@ -1518,33 +1521,41 @@ If \texttt{f ∈ e₃} then either \texttt{f ∈ e₁} or \texttt{f ∈ e₂}.
     % other words if the source and the target values are different.
 				
 \begin{thm}[Persistence]
-Let \texttt{e₁}, \texttt{e₂}, \texttt{e₃} be scripts such that
-\texttt{e₁ ⋎ e₂} and \texttt{e₃ = e₁ ⊔₃ e₂}. Let \texttt{f} be an edit
-of type \texttt{u ⟼ v} such that \texttt{u ≢ v} and \texttt{f ∈ e₁}.
-Then either \texttt{f ∈ e₃} or there is a conflict \texttt{c} such that
-\texttt{e₁ ⊔₃ e₂ ↑ c}.
+\label{thm:persistence}
+Let \texttt{e₃ = e₁ ⊔₃ e₂}, \texttt{f : u ⟼ v}, such that \texttt{u ≢
+  v} and \texttt{f ∈ e₁} (\texttt{f ∈ e₂}), then either \texttt{f ∈
+  e₃} or there exists a conflict \texttt{c} such that \texttt{c ∈ e₃}.
 \end{thm}
-\begin{proof}
-  The proof is by induction on \texttt{Merge₃ e₁ e₂ e₃} (from Property
-  \ref{prop:merge3-correct}) and \texttt{f ∈ₑ e₁}.
-    % 
-    In the base case edit \texttt{f} is merged with some other edit
-    \texttt{g}, then either \texttt{f ⊔ g ↥ c} or \texttt{f ⊔ g ↧ h}.
-    %
-    In the former case we are done because \texttt{f} raises a
-    conflict.  In the latter case we proceed by case analysis on
-    \texttt{f ⊔ g ↧ h}.
-    %
-    The merged edit \texttt{h} is either \texttt{f} (case \texttt{Id₂}
-    or \texttt{Idem}), or \texttt{g} (\texttt{Id₁}). In the first case
-    we are done, because \texttt{f} occurs in the merged script.
-    %
-    The second case is contradictory because we assumed \texttt{u ≢
-      v}.
-\end{proof}        
+Note that edit \texttt{f} represents a change edit because \texttt{u ≢
+  v} ---it could have been an identity edit and overwritten by another
+change edit due to axiom \texttt{Id₁} (\texttt{Id₂}) otherwise.
+%
+Persistence guarantees not to back out \texttt{f}, therefore either
+\texttt{f} is part of the merged edit (\texttt{f ∈ e₃}), or it
+triggers a conflict (\texttt{c ∈ e₃}).
+%
 
-    The theorem holds also when the edit belongs to the other script and
-    the proof is entirely symmetrical.
+% \begin{proof}
+%   The proof is by induction on \texttt{Merge₃ e₁ e₂ e₃} (from Property
+%   \ref{prop:merge3-correct}) and \texttt{f ∈ₑ e₁}.
+%     % 
+%     In the base case edit \texttt{f} is merged with some other edit
+%     \texttt{g}, then either \texttt{f ⊔ g ↥ c} or \texttt{f ⊔ g ↧ h}.
+%     %
+%     In the former case we are done because \texttt{f} raises a
+%     conflict.  In the latter case we proceed by case analysis on
+%     \texttt{f ⊔ g ↧ h}.
+%     %
+%     The merged edit \texttt{h} is either \texttt{f} (case \texttt{Id₂}
+%     or \texttt{Idem}), or \texttt{g} (\texttt{Id₁}). In the first case
+%     we are done, because \texttt{f} occurs in the merged script.
+%     %
+%     The second case is contradictory because we assumed \texttt{u ≢
+%       v}.
+% \end{proof}        
+
+%     The theorem holds also when the edit belongs to the other script and
+%     the proof is entirely symmetrical.
    		
     \subsection{Maximality}
     \todo{Not interesting, but desirable! cite Pierce}
@@ -1577,7 +1588,7 @@ Then either \texttt{f ∈ e₃} or there is a conflict \texttt{c} such that
     nodes could be rearranged in arbitrary ways to avoid conflicts.
     The structural invariant specifies how nodes can be rearranged.
     Why do we want this specific one?}
-    
+    %
     An edit script describes how to transform the source object into
     the target object, by traversing it in \emph{depth-first order}
     and mapping source nodes into target nodes.
@@ -1812,8 +1823,8 @@ class Typeable a => Diff a where
   toHTree :: a → HTree a
   fromHTree :: HTree a → a
   (=?=) :: C xs a → C ys a → Maybe (xs :~: ys)
-  distance :: C xs a → C ys a → Double
 \end{minted}
+%  distance :: C xs a → C ys a → Double
 The associated type family \texttt{Encoding a} returns the concrete
 data type that encodes the constructors of \texttt{a}.
 %
@@ -1849,22 +1860,22 @@ data type, and if so it returns a proof that their field types are
 equal. This operator is used by the merge algorithm to dynamically
 check \emph{alignment} and to determine whether an update is just a copy.
 %
-The function \texttt{distance} computes the cost of an update between
-constructors of the same type and it is expected to be a
-\emph{metric}.
+% The function \texttt{distance} computes the cost of an update between
+% constructors of the same type and it is expected to be a
+% \emph{metric}.
 
-\begin{definition}[Metric]
-\label{par:Metric}
-A metric on a set A is a function
-d : (A × A) → ${\rm I\!R}$ such that $\forall$ x, y, z $\in$ A:
-	\begin{align*}
-		d(x, y) &\geq 0 \quad &\mbox{\emph{{(non-negativity)}}}\\ 
-		d(x, y) &= 0 \Leftrightarrow x = y \quad &\mbox{\emph{(coincidence axiom)}} \\		
-		d(x, y) &= d(y, x) \quad &\mbox{\emph{(symmetry)}}\\
-		d(x, z) &\leq d(x, y) + d(y, z) \quad &\mbox{\emph{(triangle inequality})}
-	\end{align*}
-	
-\end{definition}
+% \begin{definition}[Metric]
+% \label{par:Metric}
+% A metric on a set A is a function
+% d : (A × A) → ${\rm I\!R}$ such that $\forall$ x, y, z $\in$ A:
+% 	\begin{align*}
+% 		d(x, y) &\geq 0 \quad &\mbox{\emph{{(non-negativity)}}}\\ 
+% 		d(x, y) &= 0 \Leftrightarrow x = y \quad &\mbox{\emph{(coincidence axiom)}} \\		
+% 		d(x, y) &= d(y, x) \quad &\mbox{\emph{(symmetry)}}\\
+% 		d(x, z) &\leq d(x, y) + d(y, z) \quad &\mbox{\emph{(triangle inequality})}
+% 	\end{align*}	
+% \end{definition}
+
 A reasonable distance function for algebraic
 data type constructors is the \emph{discrete distance}:
 	\[ d(x, y) = 
