@@ -596,7 +596,7 @@ retrieves the source and target objects from a script, by
 \emph{inverting} the process that we have just described.
 %
 Unfortunately, the lack of types already makes it hard to even assign a suitable
-type to a function \texttt{⟪\_⟫ : ES → HList ?}:
+type to a function \texttt{⟪\_⟫ : ES → HList ?} :
 what type should we put instead of the question mark?
 %
 Crucially, an untyped edit script does not guarantee that its
@@ -757,7 +757,7 @@ with competitive \texttt{diff}s ---they will probably capture changes
 more precisely, the advantage of reasoning by such specification is
 that our results are valid for virtually any \emph{sensible}
 \texttt{diff} algorithm.
- %
+%
 % The following data type serves to this purpose: \texttt{Diff x y e} is
 % the proof that the edit script \texttt{e} is the result of diffing
 % lists \texttt{x} and \texttt{y}.
@@ -770,7 +770,6 @@ that our results are valid for virtually any \emph{sensible}
 %   Upd : Diff (x₁ +++ x₂) (y₁ +++ y₂) e → 
 %         Diff (Node α x₁ ∷ x₂) (Node β y₁ ∷ y₂) (Upd α β ∷ e)
 % \end{minted}
-
 % We prove that \texttt{Diff x y e} complies with the specifications of
 % \texttt{diff} (Requirement \ref{req:diff-specs}), because \texttt{x}
 % and \texttt{y} are uniquely determined by respectively the source and
@@ -781,7 +780,7 @@ that our results are valid for virtually any \emph{sensible}
 % \center{\texttt{Diff x y e ⇔ x ≡ ⟪ e ⟫ ∧ y ≡ ⟦ e ⟧}}
 % \end{prop}
 In our implementation we employ a generalization of Lempsink's
-\texttt{diff} algorithm \cite{Lemp09}, which meets
+\texttt{diff} algorithm \cite{Lemp09}, which we have proved to meet
 Requirement \ref{req:diff-specs}.
 % \begin{minted} {agda}
 % diff-suff :  (x : HList xs) (y : HList ys) → Diff x y (diff x y)
@@ -826,19 +825,17 @@ define a sound merging semantics.
 \subsection{Alignment}
 \label{subsec:alignment}
 %
-\emph{Alignment} is a relation that captures corresponding parts of
-objects, that should be merged.
+\emph{Alignment} is a relation used to pinpoint the corresponding
+parts of two objects, which should be merged together.
 %
-Trying to merge unrelated parts is likely to fail, resulting in
-spurious conflicts, therefore alignment affects immensely the
-precision and reliability of \texttt{diff3}.
+Merging unrelated parts is likely to fail, resulting in spurious
+conflicts, or produce unexpected results, therefore alignment affects
+immensely the precision and reliability of \texttt{diff3}.
 %
-In our framework, it is convenient to use \emph{edits} to identify
-these parts.
-%
-In fact, while their source values belong to the same object
-(\emph{base}), their target values belong to different replicas, which
-we want to merge.
+In this framework, \emph{edits} are suitable candidates to identify
+these parts, because they relate source values that belong to the same
+object (\emph{base}), with target values that belong to different
+replicas, which we want to merge.
 %
 More formally, we define \emph{alignment} as follows.
 \begin{definition}[Edit and Script Alignment]
@@ -850,8 +847,10 @@ More formally, we define \emph{alignment} as follows.
     pairwise aligned.
 \end{itemize}
 \end{definition}
-Definition \ref{def:align} is about \emph{values}, not only nodes: any
-two edits \texttt{u ⟼ v} and \texttt{u ⟼ w} are aligned.
+Note that Definition \ref{def:align} aligns edits according to their
+source \emph{values}, rather than nodes, so that insert and
+no-operations may also be aligned: any two edits of type \texttt{u ⟼
+  v} and \texttt{u ⟼ w} are aligned.
 %	
 Intuitively, two edit scripts that have the same \emph{source} object
 can be aligned, because they share the same collection of
@@ -865,8 +864,8 @@ Consider the lists \texttt{x = [1]}, \texttt{y = [0,1]} and \texttt{z
   = [1,2]}.
 %
 Edit scripts \texttt{e₁} and \texttt{e₂} represent the \texttt{diff}
-between \texttt{x} and respectively \texttt{y} and \texttt{z}
-\footnote{In this example \texttt{Cpy α} stands for \texttt{Upd α α}}.
+between \texttt{x} and \texttt{y} and \texttt{z}
+respectively\footnote{In this example \texttt{Cpy α} stands for \texttt{Upd α α}}.
 \begin{minted}{agda}
 e₁ e₂ : ES [ List Int ] [ List Int ]
 e₁ = [Ins  (::), Ins  0, Cpy (::), Cpy 1, Cpy []]
@@ -878,10 +877,11 @@ e₂ = [Cpy (::), Cpy 1, Ins  (::), Ins  2, Cpy []]
 % e₁ = [Ins (::), Ins 1, Cpy (::), Cpy 1,                 Cpy []]
 % e₂ = [                Cpy (::), Cpy 1, Ins (::), Ins 2, Cpy []] 
 % \end{minted}       
-The scripts are \emph{not} aligned, because their first edits are not,
-namely \texttt{⊥ ≢ ⟨ :: ⟩}, where \texttt{⊥} is the source value of
-\texttt{Ins (::)} in \texttt{e₁} and \texttt{⟨ :: ⟩} is the source
-value of \texttt{Cpy (::)} in \texttt{e₂}.
+Scripts \texttt{e₁} and \texttt{e₂} are \emph{not} aligned, because
+their first edits are not, namely \texttt{⊥ ≢ ⟨ :: ⟩}, where
+\texttt{⊥} is the source value of \texttt{Ins (::)} in \texttt{e₁} and
+\texttt{⟨ :: ⟩} is the source value of \texttt{Cpy (::)} in
+\texttt{e₂}.
 
 Interestingly, alignment can be recovered by inserting no-operation
 edits in these points.
@@ -919,8 +919,8 @@ Adding no-operations operations to align scripts is effective, because
 \texttt{Nop} always aligns with \texttt{Ins} --- they both have the
 empty value \texttt{⊥} as source.
 %
-Furthermore, it is also an attractive technique, because no-operations
-cannot introduce new conflicts, since they are \emph{identity} edits.
+Furthermore, it is also innocuous, because no-operations cannot
+introduce new conflicts, since they are \emph{identity} edits.
 
 
 %         \paragraph{Weak Alignment}\todo{Drop weak alignment, give only Proposition}
@@ -939,146 +939,146 @@ cannot introduce new conflicts, since they are \emph{identity} edits.
 % align : Diff x y e₁ → Diff x z e₂ → e₁ ~ e₂
 % \end{minted}
 
-	\subsection{Merge Semantics}
-        \label{subsec:merge-semantics}
-        \todo{Mention that implements the three-way merge}
-	Our merge semantics is defined over aligned edits.
-	Two aligned edits contain at most three distinct values: 
-	one common source and two, 	possibly different, targets, which 
-	are treated as corresponding parts.
-	A merge can either fail raising a conflict or succeed producing
-	an edit that combines both.
+\subsection{Semantics of Merge and Conflict}
+\label{subsec:merge-semantics}
+We formalize the three-way merge technique, by defining a sound
+semantics of merge and conflict over aligned edits.
+%
+Two aligned edits contain at most three distinct values: one common
+source and two, possibly different, targets, which are treated as
+corresponding parts.  
+%
+Three-way merge fails and triggers a conflict, if the three values are
+all different: there is no general a priori strategy to merge such
+contrasting edits.
+%
+If no more than two of them are different, it succeeds and finds an
+edit that combines both.
 	
-	\paragraph{Merge}
-	Data type \texttt{f ⊔ g ↧ h} is the proof that merging aligned
-        edits \texttt{f} and \texttt{g} succeeds producing the edit
-        \texttt{h}.
-	
+\paragraph{Merge}
+Data type \texttt{f ⊔ g ↧ h} represents the semantics of merge:
+it is the proof that merging aligned edits \texttt{f} and \texttt{g}
+succeeds, producing the edit \texttt{h}.
 \begin{minted} {agda}
 data _⊔_↧_ : (v ⟼ a) → (v ⟼ b) → (v ⟼ c) → Set where
   Id₁ : (f : v ⟼ v) (g : v ⟼ w) → f ⊔ g ↧ g
   Id₂ : (f : v ⟼ w) (g : v ⟼ v) → f ⊔ g ↧ f
   Idem : (f : v ⟼ w) → f ⊔ f ↧ f
 \end{minted}
+Observe that the type of the three edits in the declaration guarantees
+that this judgment is defined only on aligned edits and that also the
+resulting edit must share the same source value.
+%
+Each constructor represents a distinct axiom that justifies why the
+merge is possible and determines the merged target value.
+%
+Rules \texttt{Id₁} and \texttt{Id₂} apply when respectively the
+first and the second transformation is an \emph{identity} edit.
+%
+Similarly to the three-way merge algorithm, when one version is
+unchanged the other is chosen.
+%
+The fact that merging is an \emph{idempotent} operation motivates the
+third rule (\texttt{Idem}): it applies when the same edit is performed
+independently on the same source value.
+%
+This merging semantics is compelling because it is minimal, it
+contains only three axioms, yet complete because it can encode every
+true merge, even though it does not mention any specific edit.
 
-	Observe that the type of the two input edits guarantees their
-        alignment.
-        %
-        Furthermore, determines only the \emph{target} value, hence the
-        third merged edit retain the the same source value \texttt{v}.
-
-	Each constructor represents a distinct axiom that justifies why
-	the merge is possible and determines the merged edit.
-	The rules \texttt{Id₁} and \texttt{Id₂} apply when 
-	respectively the first and the second transformation is an \emph{identity} 
-        edit.
-	Similarly to the three-way merge algorithm, when one version is unchanged the other
-        is chosen.
-	The fact that merging is an \emph{idempotent} operation motivates the 
-	third rule \texttt{Idem}.
-	It applies when the same edit is performed independently in both versions.
-	
-	Note that this definition is particularly effective because it is 
-	minimal and concise, as it does not mention specific
-	edits, yet it is complete, because it can encode all the true concrete 
-        merges.	
-
-	\paragraph{Conflict}
-	A conflict occurs when two edits perform irreconcilable changes.
-	The following data type represents the possible conflicts that may arise
-	from aligned edits.
-	\todo{Drop data type, discuss only generically what conflicts
-              are possible}
-\begin{minted}{agda}
-data Conflict : Val as bs → Val cs ds → Val es fs → Set where
-  DelUpd : (α : C as a) (β : C bs a) → Conflict ⟨ α ⟩ ⊥ ⟨ β ⟩
-  UpdDel : (α : C as a) (β : C bs a) → Conflict ⟨ α ⟩ ⟨ β ⟩ ⊥ 
-  InsIns : (α : C as a) (β : C bs b) → Conflict ⊥ ⟨ α ⟩ ⟨ β ⟩
-  UpdUpd : (α : C as a) (β : C bs a) (γ : C cs a) →
-             Conflict ⟨ α ⟩ ⟨ β ⟩ ⟨ γ ⟩    
-\end{minted}
-
-	In the type \texttt{Conflict u v w} the index \texttt{u} is
-        the common source value, while indexes \texttt{v} and
-        \texttt{w} are the target values of the edits.
-        %
-        Conflicts given by \texttt{InsIns} and \texttt{UpdUpd}
-        represent conflicting insertions and updates, similar
-        to those detected by line-based \texttt{diff3}, which
-        encodes proper updates as a deletion followed by an insertion.
-        %
-        Those given by \texttt{UpdDel} and \texttt{DelUpd} are
-        entirely new and stem from the fact that these two edits are
-        in general irreconcilable.
-
-	The data type \texttt{f ⊔ g ↥ c} denotes that the edits
-        \texttt{f} and \texttt{g} cannot be merged and raise conflict
-        \texttt{c}.
-
+\paragraph{Conflict}
+A conflict occurs when two edits perform irreconcilable changes.  
+%
+Data type \texttt{Conflict u v w} represents the cause of
+a conflict, that may arise from merging aligned edits \texttt{u ⟼ v}
+and \texttt{u ⟼ w}.
+%
+We omit the full declaration for brevity, but we briefly describe its
+constructors.
+%
+Conflicts \texttt{InsIns β γ} and \texttt{UpdUpd α β γ}, of type
+\texttt{Conflict ⊥ ⟨ α ⟩ ⟨ β ⟩} and \texttt{Conflict ⟨ α ⟩ ⟨ β ⟩ ⟨ γ
+  ⟩}, denote conflicting insertions and updates respectively.
+%
+They are similar to those detected by line-based \texttt{diff3}, which
+encodes proper updates as a deletion followed by an insertion.
+%
+Conflict \texttt{DelUpd α β} of type \texttt{Conflict ⟨ α ⟩ ⊥ ⟨ β ⟩},
+is a new form of conflict, that stems from the fact that these two
+edits are in general irreconcilable ---conflict \texttt{UpdDel α β} is analogous.
+%
+Data type \texttt{f ⊔ g ↥ c} represents the semantics of conflict: it
+is the proof that edits \texttt{f} and \texttt{g} cannot be merged and
+raise conflict \texttt{c}.
 \begin{minted}{agda}
 data _⊔_↥_ : (u ⟼ v) → (u ⟼ w) → Conflict u v w → Set where
   Cnf : (f : u ⟼ v) (g : u ⟼ w) → u ≢ v → v ≢ w  → u ≢ w → 
         (c : Conflict u v w) → f ⊔ g ↥ c
 \end{minted}
+The three inequalities attest that all the values involved are
+different from each other, ensuring that the edits are actually
+incompatible and may not be merged otherwise. 
+%
+If \texttt{u ≡ v} the first edit would be an \emph{identity} edit,
+which can always be merged by \texttt{Id₁}. Similarly if \texttt{u ≡
+  w} the second edit could be merged by \texttt{Id₂}. Lastly if
+\texttt{v ≡ w} the edits \texttt{f} and \texttt{g} would perform the
+same change and could be merged applying the \texttt{Idem} rule.
+%
+Given these inequalities the corresponding conflict is uniquely
+determined, i.e. for any concrete choice of \texttt{u}, \texttt{v} and
+\texttt{w} that are all different, the conflict \texttt{c} is uniquely
+determined.
+%
+As a result, also the semantics of conflict is minimal, because it
+contains only one axiom, yet complete because it can encode all true
+conflicts.
 
-	The three inequalities guarantee that all the values involved are different
-        and ensure that the edits are actually incompatible and may not be merged 
-        otherwise. For example if \texttt{u ≡ v} the first edit would be an
-        \emph{identity} edit, which can always be merged by
-        \texttt{Id₁}. Similarly if \texttt{u ≡ w} the second edit could be merged
-        by \texttt{Id₂}. Lastly if \texttt{v ≡ w} the edits \texttt{f} and \texttt{g}
-        would perform the same change and could be merged applying the \texttt{Idem}
-        rule.
-        Given these inequalities the corresponding conflict is uniquely determined,
-        i.e. for any concrete choice of \texttt{u}, \texttt{v} and \texttt{w} that
-        are all different, the conflict \texttt{c} is uniquely determined.
-	As a result also the semantics of conflict is minimal, but still complete
-        because it can encode all the true conflicts.
-
-        \paragraph{Properties}
-        We now show some fundamental properties of our merge semantics that
-        will be handy in our formalization.
+\paragraph{Properties}
+We now show some fundamental properties of the semantics of merge and
+conflict, that are useful in our formalization.
         %
-        Firstly, we prove that the semantics is sound, that is
-        merge and conflicts are mutually exclusive.
-        \begin{prop}[Mutually Exclusive]
-          \label{prop:mutually-exclusive}
-          Let \texttt{f}, \texttt{g}, \texttt{h} be aligned edits, such that
-          \texttt{f ⊔ g ↧ h} then there exists no conflict \texttt{c} such that
-          \texttt{f ⊔ g ↥ c}.
-        \end{prop}
-        Secondly we prove \emph{determinancy} of the semantics relations.
-        \begin{prop}[Determinancy]
-          \label{prop:determinancy}
-        Let \texttt{f}, \texttt{g}, \texttt{h₁}, \texttt{h₂} be
-        aligned edits, such that \texttt{f ⊔ g ↧ h₁} and \texttt{f ⊔ g
-          ↧ h₂}, then \texttt{h₁ ≡ h₂}.
-        %
-        Similarly let \texttt{c₁} and \texttt{c₂} be conflicts, such
-        that \texttt{f ⊔ g ↥ c₁} and \texttt{f ⊔ g ↥ c₂}, then
-        \texttt{c₁ ≡ c₂}.
-        \end{prop}
+Firstly, we prove that the semantics is sound, i.e.\ fixed two edits
+merge and conflict are \emph{mutually exclusive}.
+\begin{prop}[Mutually Exclusive]
+  \label{prop:mutually-exclusive}
+  If \texttt{f ⊔ g ↧ h}, then there exists no conflict \texttt{c} such
+  that \texttt{f ⊔ g ↥ c}.
+\end{prop}
+Secondly we prove \emph{determinancy} of the semantics relations.
+\begin{prop}[Determinancy]
+\mbox{}
+\label{prop:determinancy}
+\begin{itemize}
+\item If \texttt{f ⊔ g ↧ h₁} and \texttt{f ⊔ g ↧ h₂}, then \texttt{h₁
+    ≡ h₂}.
+%
+\item  If \texttt{f ⊔ g ↥ c₁} and \texttt{f ⊔ g ↥ c₂}, then \texttt{c₁ ≡ c₂}.
+\end{itemize}
+\end{prop}
+Now that we have established that our semantics is sensible we define
+a function to merge edits.
 
-        Now that we have established that our semantics is sensible we
-        define a function that merges edits.
-
-	\paragraph{Merge Operator}
-        \todo{No Signature, prose / definition}
-	The binary operator \texttt{⊔} merges two aligned edits.
-        % 
-        For every pair of edits \texttt{f} and \texttt{g}, it either
-        finds a suitable edit \texttt{h} and provide a proof that
-        \texttt{f ⊔ g ↧ h}, or detects a conflict \texttt{c}, with a
-        proof that \texttt{f ⊔ g ↥ c}.
+\paragraph{Merge Operator}
+For every pair of aligned edits \texttt{f} and \texttt{g}, binary
+operator \texttt{⊔} either finds a suitable edit \texttt{h} and
+provide a proof that \texttt{f ⊔ g ↧ h}, or detects a conflict
+\texttt{c}, with a proof that \texttt{f ⊔ g ↥ c}.
         
 \begin{minted}{agda}
 _⊔_ : (f : u ⟼ v) (g : u ⟼ w) →
         (∃ λ c → f ⊔ g ↥ c) ⊎ (∃ λ h → f ⊔ g ↧ h)
 \end{minted}
-	This operator is outlined in table \ref{table:merge}, where we have
-        omitted the obvious inequalities in conflicts.
+Operator \texttt{⊔} is outlined in Table \ref{table:merge}, where we
+have omitted the obvious inequalities in conflicts.
+%
+Operator \texttt{⊔₃} merges \emph{aligned} edit scripts, by applying
+operator \texttt{⊔} pairwise, i.e.\ \texttt{e₁ ⊔₃ e₂ = zipWith (⊔) e₁
+  e₂}.
+ 
+%
 
-	\begin{table*}[t]
+	\begin{table*}[t!]
 	\centering
 	\begin{tabular}{| c | c | c |}
 	\hline
@@ -1115,141 +1115,158 @@ _⊔_ : (f : u ⟼ v) (g : u ⟼ w) →
 	\label{table:merge}
 	\end{table*}
 
-	\paragraph{Merged Edit Script}
-	Just like we defined a merge operator for aligned edits, we need to 
-	define a similar operator for aligned edit scripts.
-	However, since single merges may fail this operator cannot return 
-	the same well-typed edit script, that we have defined before.
-	Therefore, we introduce an alternative edit script, which is only partially 
-	well-typed and that can include conflicts.
-\begin{minted}{agda}
-data ES₃ : List Set → Set where
-  [] : ES₃ []
-  _∷_ : {u : Val as bs} → u ⟼ v → ES₃ (as ++ xs) → ES₃ (bs ++ xs)
-  _∷ᶜ_ : {u : Val as bs} → (c : Conflict u v w) → 
-             ES₃ (as ++ xs) → ES₃ (bs ++ xs)
-\end{minted}
-	The data type is indexed only by the source type list and it is well-typed
-	only with respect to it. Furthermore, it provides an additional constructor
-	for conflicts. 
+% 	\paragraph{Merged Edit Script}
+% 	Just like we defined a merge operator for aligned edits, we need to 
+% 	define a similar operator for aligned edit scripts.
+% 	However, since single merges may fail this operator cannot return 
+% 	the same well-typed edit script, that we have defined before.
+% 	Therefore, we introduce an alternative edit script, which is only partially 
+% 	well-typed and that can include conflicts.
+% \begin{minted}{agda}
+% data ES₃ : List Set → Set where
+%   [] : ES₃ []
+%   _∷_ : {u : Val as bs} → u ⟼ v → ES₃ (as ++ xs) → ES₃ (bs ++ xs)
+%   _∷ᶜ_ : {u : Val as bs} → (c : Conflict u v w) → 
+%              ES₃ (as ++ xs) → ES₃ (bs ++ xs)
+% \end{minted}
+% 	The data type is indexed only by the source type list and it is well-typed
+% 	only with respect to it. Furthermore, it provides an additional constructor
+% 	for conflicts. 
 
         \subsection{Diff$_3$ Algorithm}
         \label{subsec:diff3-algo}
+% 	The merge operator for edit scripts takes two aligned edit scripts and
+% 	applies the merge operator \texttt{⊔} previously defined to
+% 	each pair of aligned edits. It builds a merged edit script choosing a 
+% 	suitable constructor depending on the outcome of each single merge.
+%         \todo{Define this as zipWith (⊔) e1 e2}
+% \begin{minted}{agda}
+% merge₃ : {e₁ : ES as bs} {e₂ : ES as cs} → e₁ ⋎ e₂ → ES₃ as
+% merge₃ nil = []
+% merge₃ (cons f g p) with f ⊔ g
+% merge₃ (cons f g p) | inj₁ (c , _) = c ∷ᶜ merge₃ p
+% merge₃ (cons f g p) | inj₂ (h , _) = h ∷  merge₃ p
+% \end{minted}
+% 	To improve readability we will use the following infix
+%         operator:
+% \begin{minted}{agda}
+% _⊔₃_ (e₁ : ES as bs) (e₂ : ES as cs) {{p : e₁ ⋎ e₂}} → ES₃ as
+% _⊔₃_  _ _ {{p}} = merge₃ p
+% \end{minted}
+% 	The alignment proof is passed  as an instance argument, i.e. a
+%         special  type  of  implicit arguments  that  is  automatically
+%         resolved at call-sites \cite{Devriese11}.
 
-	The merge operator for edit scripts takes two aligned edit scripts and
-	applies the merge operator \texttt{⊔} previously defined to
-	each pair of aligned edits. It builds a merged edit script choosing a 
-	suitable constructor depending on the outcome of each single merge.
-        \todo{Define this as zipWith (⊔) e1 e2}
-\begin{minted}{agda}
-merge₃ : {e₁ : ES as bs} {e₂ : ES as cs} → e₁ ⋎ e₂ → ES₃ as
-merge₃ nil = []
-merge₃ (cons f g p) with f ⊔ g
-merge₃ (cons f g p) | inj₁ (c , _) = c ∷ᶜ merge₃ p
-merge₃ (cons f g p) | inj₂ (h , _) = h ∷  merge₃ p
-\end{minted}
-	To improve readability we will use the following infix
-        operator:
-\begin{minted}{agda}
-_⊔₃_ (e₁ : ES as bs) (e₂ : ES as cs) {{p : e₁ ⋎ e₂}} → ES₃ as
-_⊔₃_  _ _ {{p}} = merge₃ p
-\end{minted}
-	The alignment proof is passed  as an instance argument, i.e. a
-        special  type  of  implicit arguments  that  is  automatically
-        resolved at call-sites \cite{Devriese11}.
+%         In order to reason about merging, we encode the specifications
+%         of the merge operator in data type \texttt{Merge₃}:
 
-        In order to reason about merging, we encode the specifications
-        of the merge operator in data type \texttt{Merge₃}:
-
-% \begin{figure*}[t!]
-% \centering
-\todo{Drop Merge3}
-\begin{minted}{agda}
-data Merge₃ : ES xs ys → Es xs zs → ES₃ xs → Set where
-  nil : Merge₃ [] [] []
-  merge : f ⊔ g ↧ h → Merge₃ e₁ e₂ e₃ → 
-                   Merge₃ (f ∷ e₁) (g ∷ e₂) (h ∷ e₃)
-  conflict : f ⊔ g ↥ c → Merge₃ e₁ e₂ e₃ → 
-                    Merge₃ (f ∷ e₁) (g ∷ e₂) (c ∷ᶜ e₃)
-\end{minted}
+% % \begin{figure*}[t!]
+% % \centering
+% \todo{Drop Merge3}
+% \begin{minted}{agda}
+% data Merge₃ : ES xs ys → Es xs zs → ES₃ xs → Set where
+%   nil : Merge₃ [] [] []
+%   merge : f ⊔ g ↧ h → Merge₃ e₁ e₂ e₃ → 
+%                    Merge₃ (f ∷ e₁) (g ∷ e₂) (h ∷ e₃)
+%   conflict : f ⊔ g ↥ c → Merge₃ e₁ e₂ e₃ → 
+%                     Merge₃ (f ∷ e₁) (g ∷ e₂) (c ∷ᶜ e₃)
+% \end{minted}
 % \caption{Merge operator specification}
 % \label{fig:merge3}
 % \end{figure*}
 
-        We now prove that our merge operator fulfills its requirements.
-\begin{prop}[\texttt{⊔₃} is correct]
-\label{prop:merge3-correct}
-Let \texttt{e₁}, \texttt{e₂} and \texttt{e₃} be edit scripts such that,
-\texttt{e₁ ⋎ e₂}, then:
-\center{\texttt{e₃ ≡ e₁ ⊔₃ e₂ ⇔ Merge₃ e₁ e₂ e₃}}
-\end{prop}
-\begin{proof}
-The if direction follows by induction on \texttt{e₁ ⋎ e₂}.
-The iff direction follows by induction on \texttt{Merge₃ e₁ e₂ e₃} and 
-relies on properties \ref{prop:mutually-exclusive} and \ref{prop:determinancy}.
-\end{proof}
+%         We now prove that our merge operator fulfills its requirements.
+% \begin{prop}[\texttt{⊔₃} is correct]
+% \label{prop:merge3-correct}
+% Let \texttt{e₁}, \texttt{e₂} and \texttt{e₃} be edit scripts such that,
+% \texttt{e₁ ⋎ e₂}, then:
+% \center{\texttt{e₃ ≡ e₁ ⊔₃ e₂ ⇔ Merge₃ e₁ e₂ e₃}}
+% \end{prop}
+% \begin{proof}
+% The if direction follows by induction on \texttt{e₁ ⋎ e₂}.
+% The iff direction follows by induction on \texttt{Merge₃ e₁ e₂ e₃} and 
+% relies on properties \ref{prop:mutually-exclusive} and \ref{prop:determinancy}.
+% \end{proof}
         
-        Now that we have shown that the merge operator is in a
-        one-to-one relationship with the specification data type, we
-        will use the latter to reason more conveniently about its
-        properties.
+        % Now that we have shown that the merge operator is in a
+        % one-to-one relationship with the specification data type, we
+        % will use the latter to reason more conveniently about its
+        % properties.
 
-	\paragraph{Diff3}
-        \todo{Less details, more intuition, both in code and explanations}
-	We finally give a generic \texttt{diff₃} algorithm for
-        heterogeneous lists.
+	% \paragraph{Diff3}
+	We conclude this Section giving a generic \texttt{diff₃}
+        algorithm for typed trees.
         %
-        We follow the conventional interface, in which the second
-        argument is considered \emph{base}:
+        % We follow the conventional interface, in which the second
+        % argument is considered \emph{base}:
 \begin{minted}{agda}
-diff₃ : HList ys → HList xs → HList zs → ES₃ xs
-diff₃ y x z with align (diff-suff x y) (diff-suff x z)
-diff₃ y x z | WA _ _ p = merge₃ p
+diff₃ : HTree a → HTree a → HTree a → Conflicts ⊎ HTree a
+diff₃ y x z with align (diff [ x ] [ y ]) (diff [ x ] [ z ])
+... | (e₁* , e₂*) = typecheck (e₁* ⊔₃ e₂*)
 \end{minted}
-	
-	The \texttt{diff} algorithm is called implicitly by
-        \texttt{diff-suf}; the edit scripts so obtained are aligned
-        via extension using \texttt{align}, from which the alignment
-        proof \texttt{p} is extracted and used to finally merge the
-        scripts with \texttt{merge₃}.  Note that the call to
-        \texttt{align} is valid because \texttt{diff-suff} is invoked
-        with the same value \texttt{x} as first argument in both its
-        arguments.
-
-        \paragraph{Type Checking}
-        \todo{Typed-version of diff3, 
-              no-conflict /-> well-typed example,
-              discussion about finding type signature}
-	Even though merging might succeed without triggering any
-        conflict the merged edit script might be invalid, i.e.\ it will
-        not produce a well-typed object as \emph{target}.
+	Following the conventional interface, the second argument
+        \texttt{x} is considered the \emph{base} version, therefore it
+        is diffed against \texttt{y} and \texttt{z}, using a
+        \texttt{diff} algorithm that meets Requirement
+        \ref{req:diff-specs}.
         %
-        The reason is that the merge operator \texttt{⊔₃} merges edits
-        \emph{pointwise}, therefore the script obtained by joining two
-        well-typed edit script may not be well-typed.  Consider for
-        instance the following edit scripts:
+        Function \texttt{align} aligns the edit scripts obtained by
+        diffing the base version with the new versions, extending them
+        with \texttt{Nop} operations.
+        %
+        The call to this function is \emph{sound}, because dependent
+        types can capture that those edit scripts share the same
+        \emph{source} list \texttt{[ x ]}.
+        %
+        Edit scripts \texttt{e₁*} and \texttt{e₂*} are aligned by
+        Proposition \ref{prop:align-ext} and are merged by operator
+        \texttt{⊔₃}.
+        %
+        We now proceed to explain the non-standard function
+        \texttt{typecheck}.
+        %
+        
+\paragraph{Type Checking}
+A merged edit script must be type-checked to ensure that it actually
+produces a \emph{target} object, that is well-typed.
+%
+Clearly, a conflict makes a script ill-typed, because the \emph{target}
+value is undefined.
+%
+Surprisingly enough a conflict-free edit script may still be
+ill-typed.
+%
+This is counter-intuitive because the two input edit scripts are
+singularly well-typed and one might expect that, without conflicts,
+their fusion should also be well-typed.
+%
+
+\paragraph{Example} Consider for instance the following \emph{aligned}
+edit scripts:
 \begin{minted}{agda}
 e₁ e₂ : ES [] [List Int]
 e₁ = [Ins [], Nop]
 e₂ = [Nop, Ins []]
 \end{minted}
-        Merging the two edits with \texttt{e₁ ⊔₃ e₂} yields a conflict
-        free, yet ill-typed edit script:
-\begin{minted}{agda}
-e₃ : ES₃ []
-e₃ = [Ins [], Ins []]
-\end{minted}
-        The problem is that the first insert produces a constructor
-        that does not take any arguments, yet the tail of the script
-        yields another empty list as argument.
-        
-        The merged edit script must be type-checked to ensure that it
-        actually produces a well-typed merged \emph{target} object.
-        %
-	The typing judgment \texttt{e ⇓ as} states that the edit
-        script \texttt{e} is well typed and produces a list of type
-        \texttt{HList as}.  The typing rules are straightforward:
-	\begin{mathpar}
+The merge operator \texttt{e₁ ⊔₃ e₂} yields script \texttt{[Ins [],
+  Ins []]}, which is conflict-free, yet ill-typed, because the first
+insert produces a constructor that does not take any arguments, but
+the tail of the script yields another empty list as argument.
+%
+The culprit is that operator \texttt{⊔₃} merges edits \emph{pairwise},
+therefore the whole merged script may alternatively follow either of
+the input scripts.
+%
+There is no guarantee that this pattern actually retains type-safety:
+the script must be explicitly type-checked!
+%
+The typing judgment \texttt{e ⇓ as} states that the edit script
+\texttt{e} is well typed and produces a list of type \texttt{HList
+  as}.
+%
+The typing rules are straightforward and a trivial inference algorithm
+can be read off them.
+\begin{mathpar}
           \inferrule
           {}
           {\texttt{[] ⇓ []}}
@@ -1259,17 +1276,48 @@ e₃ = [Ins [], Ins []]
            \texttt{w : C cs ds} \\
            \texttt{e ⇓ cs ++ ys}}
           {\texttt{f ∷ e ⇓ (ds ++ ys)}}
-        \end{mathpar}
+\end{mathpar}
+%
+% Note
+% Even though merging might succeed without triggering any conflict the
+% merged edit script might be invalid, i.e.\ it will not produce a
+% well-typed object as \emph{target}.
+%         %
+        
+%   Moreover note that the conflict cons constructor (\texttt{∷ᶜ})
+% is not mentioned in the typing rules, therefore edit scripts
+% containing conflicts are ill-typed.  Edit scripts of type \texttt{ES₃}
+% can be converted to \texttt{ES}, if they are well typed:
+% \begin{minted}{agda}
+% ⌜_⌝  : (e : ES₃ xs) → {{q : e ⇓ ys}} → ES xs ys
+% \end{minted}
 
-	A trivial inference algorithm can be easily deduced from the typing rules.
-	Moreover note that the conflict cons constructor (\texttt{∷ᶜ}) is not 
-	mentioned in the typing rules, therefore edit scripts containing
-	conflicts are ill-typed.		
-	Edit scripts of type \texttt{ES₃} can be converted to \texttt{ES}, if they
-	are well typed:
-\begin{minted}{agda}
-⌜_⌝  : (e : ES₃ xs) → {{q : e ⇓ ys}} → ES xs ys
-\end{minted}
+\paragraph{Discussion}
+While \texttt{diff} is type-safe, i.e.\ it always produces a
+well-typed edit script, it is quite disappointing that we cannot make
+\texttt{diff3} type-safe, not even in absence of conflicts and with
+dependent-types available.
+%
+The problem becomes evident in the type of the merge operator
+\texttt{⊔₃ : ES xs ys -> ES xs zs -> ES xs ?}, what type should we put
+instead of the question mark?
+%
+If \texttt{ys ≡ zs}, like inside \texttt{diff3}, the question is
+trivial, but otherwise there is no ``right'' type.
+%
+An arbitrary choice, that is either \texttt{ys} or \texttt{zs}, is
+unsatisfactory, because it makes the algorithm asymmetric: we would
+expect \texttt{e₁ ⊔₃ e₂} to produce the same result as \texttt{e₂ ⊔₃
+  e₁}, but the two scripts have even different types!
+%
+An existential type, i.e. \texttt{∃ ws . ES xs ws} is too ``general''.
+In order to add an edit, say \texttt{Ins α}, with \texttt{α : C as a},
+\texttt{ws} should have prefix \texttt{as}, i.e.\ \texttt{ws ≡ as ++
+  ws'}, but \texttt{ws} is just \emph{some} list.
+%
+Unfortunately, we acknowledge that our \texttt{diff3} algorithm may
+fail in yet another way, besides proper conflicts, that is by
+producing an ill-typed script.
 
 \section{Properties}
 \label{sec:properties}
