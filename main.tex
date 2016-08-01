@@ -1581,179 +1581,183 @@ triggers a conflict (\texttt{c ∈ e₃}).
 %     The theorem holds also when the edit belongs to the other script and
 %     the proof is entirely symmetrical.
    		
-    \subsection{Structural  Invariants}
-    \todo{Start with the problem: with structured data, there
-    nodes could be rearranged in arbitrary ways to avoid conflicts.
-    The structural invariant specifies how nodes can be rearranged.
-    Why do we want this specific one?}
-    %
-    An edit script describes how to transform the source object into
-    the target object, by traversing it in \emph{depth-first order}
-    and mapping source nodes into target nodes.
-    %
-    Interestingly the embedding preserves the depth-first order: if a
-    source node comes before another then the mapping of the first
-    will come before the mapping of the second.    
-    %
-    However nodes are not only mapped (updated) from the source to the
-    target, but they may also be inserted and removed, therefore the
-    structural invariant must be adjusted to take these edits into
-    account.
-    %
-    Intuitively the order is preserved because nodes that 
-    are mapped first in a script precede those that are mapped later.
-    %
-    We start by generalizing depth-first ordering to list of trees and
-    giving a basic ordering to edits in a script.
-    %
-    % The structural invariant property relies on 
-    % by showing how the former implies the latter we deduce
-    % the structural invariant.
+\subsection{Structural Invariant}
+When diffing and merging tree-like data, it suddenly becomes difficult
+to predict how edits may change its structure, especially if
+compared with the ``flat'' structure of data handled by line-based
+\texttt{diff3}.
+%
+In this section, we present a structural invariant, which retains some
+order between nodes and their relative positions, thus characterizing
+how the shape of structured data may change.
+%    
+
+\paragraph{Depth-First Pre-Order}
+An edit script describes how to transform a source object into a
+target object, by traversing the former in \emph{depth-first
+  pre-order} and mapping its nodes into the nodes of the latter.
+%
+Interestingly, the embedding preserves depth-first pre-order: if a
+source node comes before another then the mapping of the first will
+come before the mapping of the second.
+%
+However, nodes are not only mapped (updated) from the source to the
+target, but they may also be inserted and removed, therefore the
+structural invariant must be adjusted to take these edits into
+account.
+%
+Intuitively the order is preserved because nodes that are mapped first
+in a script precede those that are mapped later ---since edit scripts
+are a flat list-like data structure, we simply order edits according
+to their position in the script.
+% %
+% A pre-order depth-first traversal consists of firstly visiting the
+% current node and then traversing recursively its subtrees from the
+% leftmost to the rightmost.  
+% %
+% The traversal induces an ordering on the nodes, so that those that are
+% visited sooner come before those that are processed later.  Since edit
+% scripts work with list of trees, we have to generalize the ordering
+% accordingly.
     
+% The type \texttt{hs ⊢ α ⊏ β} denotes that the node \texttt{α} comes
+% before the node \texttt{β}, according to depth first traversal of the
+% trees contained in the list of trees \texttt{hs}.  \todo{Probably drop
+%   data type. Better notation?}
+% \begin{minted}{agda}
+% data _⊢_⊏_ : Hist xs → C as a → C bs b → Set where
+%   here : β ∈ (hs₁ +++ hs₂) → Node α hs₁ ∷ hs₂ ⊢ α ⊏ β
+%   there : (hs₁ +++ hs₂) ⊢ α ⊏ β → Node γ hs₁ ∷ hs₂ ⊢ α ⊏ β
+% \end{minted}
 
-    \paragraph{Depth-First Order}
-    A pre-order depth-first traversal consists of firstly visiting the current node 
-    and then traversing recursively its subtrees from the leftmost to the rightmost.
-    The traversal induces an ordering on the nodes, so that those that
-    are visited sooner come before those that are processed later.
-    Since edit scripts work with list of trees, we have to generalize the
-    ordering accordingly.
-    
-    The type \texttt{hs ⊢ α ⊏ β} denotes that the node \texttt{α}
-    comes before the node \texttt{β}, according to depth first
-    traversal of the trees contained in the list of trees \texttt{hs}.
-    \todo{Probably drop data type. Better notation?}
-\begin{minted}{agda}
-data _⊢_⊏_ : Hist xs → C as a → C bs b → Set where
-  here : β ∈ (hs₁ +++ hs₂) → Node α hs₁ ∷ hs₂ ⊢ α ⊏ β
-  there : (hs₁ +++ hs₂) ⊢ α ⊏ β → Node γ hs₁ ∷ hs₂ ⊢ α ⊏ β
-\end{minted}
+% Intuitively the list is used as a stack, so that after visiting each
+% node its children, yet to be traversed, are pushed on the stuck.  Note
+% that those trees will be visited before those already on the stuck,
+% hence following correctly the depth-first traversal.
 
-    Intuitively the list is used as a stack, so that after visiting
-    each node its children, yet to be traversed, are pushed on the stuck.
-    Note that those trees will be visited before those already on the stuck,
-    hence following correctly the depth-first traversal.
+% \begin{definition}[Edit Order]
+% Given an edit script \texttt{e} and two edits \texttt{f} and \texttt{g}, we write
+% \texttt{e ⊢ f ⊏ g} if and only if \texttt{f} precedes \texttt{g} in \texttt{e}.
+% \end{definition}
 
-    \paragraph{Edit Order}
-    Since edit scripts are a flat list-like data structure, we simply
-    order edits according to their position in the script.
+% Before stating the main theorem relies on two fundamental properties:
+% that the target (source) function and \texttt{diff} are
+% \emph{order-preserving} (OP).
+% %
+% Property \ref{prop:order-preserving-target-fun} guarantees that the
+% relative order of edits in a script corresponds to the depth-first
+% order of their target (source) nodes in the target (source) objects.
+% %
+% Property \ref{prop:order-preserving-embedding} ensures that if in the
+% target (source) object a node precedes another, then in the diff
+% script the first node is produced by an edit that comes before the
+% edit that produces the second.
 
-\begin{definition}[Edit Order]
-Given an edit script \texttt{e} and two edits \texttt{f} and \texttt{g}, we write
-\texttt{e ⊢ f ⊏ g} if and only if \texttt{f} precedes \texttt{g} in \texttt{e}.
-\end{definition}
+% \begin{prop}[\texttt{⟦\_⟧} is OP]
+% \label{prop:order-preserving-target-fun}
+% Let \texttt{e} be an edit script and \texttt{f} and \texttt{g} edits
+% of type \texttt{v ⟼ ⟨ α ⟩} and \texttt{w ⟼ ⟨ β ⟩}, such that
+% \texttt{e ⊢ f ⊏ g}, then \texttt{⟦ e ⟧ ⊢ α ⊏ β}.
+% \end{prop}
+%   We omit the symmetrical property for \emph{source} nodes and objects.
+
+% \begin{prop}[Embedding is OP]
+% \label{prop:order-preserving-embedding}
+% Let \texttt{x} and \texttt{y} be heterogeneous lists and let 
+% \texttt{e} be an edit script such that \texttt{e = diff x y}.
+% Let also \texttt{α} and \texttt{β} be nodes such that \texttt{y ⊢ α ⊏ β}.
+% Then there are edits \texttt{f : u ⟼ ⟨ α ⟩} and \texttt{g : v ⟼ ⟨ β ⟩}
+% such that \texttt{e ⊢ f ⊏ g}.
+% \end{prop}
+% \begin{proof}
+%   The proof relies on Requirement \ref{req:diff-specs} and Proposition
+%   \ref{prop:diff-correct} (requirements and specifications of
+%   \texttt{diff}).
+%   %
+%   By induction on \texttt{y ⊢ α ⊏ β} we locate \texttt{f : u ⟼ ⟨ α ⟩}
+%   in \texttt{e}. 
+%   %
+%   By Proposition \ref{prop:data-retention} it follows that there
+%   exists \texttt{g : v ⟼ ⟨ β ⟩} in the tail of \texttt{e}.
+% \end{proof}
+% We again omit the dual property for \emph{source} nodes and object.
 
 \paragraph{Order Invariant}
-Before stating the main theorem relies on two fundamental properties:
-that the target (source) function and \texttt{diff} are
-\emph{order-preserving} (OP).
-%
-Property \ref{prop:order-preserving-target-fun} guarantees that the
-relative order of edits in a script corresponds to the depth-first
-order of their target (source) nodes in the target (source) objects.
-%
-Property \ref{prop:order-preserving-embedding} ensures that if in the
-target (source) object a node precedes another, then in the diff
-script the first node is produced by an edit that comes before the
-edit that produces the second.
+The order-invariant property ensures that \texttt{diff} preserves the
+depth-first order of the source (target) objects:
 
-\begin{prop}[\texttt{⟦\_⟧} is OP]
-\label{prop:order-preserving-target-fun}
-Let \texttt{e} be an edit script and \texttt{f} and \texttt{g} edits
-of type \texttt{v ⟼ ⟨ α ⟩} and \texttt{w ⟼ ⟨ β ⟩}, such that
-\texttt{e ⊢ f ⊏ g}, then \texttt{⟦ e ⟧ ⊢ α ⊏ β}.
-\end{prop}
-  We omit the symmetrical property for \emph{source} nodes and objects.
 
-\begin{prop}[Embedding is OP]
-\label{prop:order-preserving-embedding}
-Let \texttt{x} and \texttt{y} be heterogeneous lists and let 
-\texttt{e} be an edit script such that \texttt{e = diff x y}.
-Let also \texttt{α} and \texttt{β} be nodes such that \texttt{y ⊢ α ⊏ β}.
-Then there are edits \texttt{f : u ⟼ ⟨ α ⟩} and \texttt{g : v ⟼ ⟨ β ⟩}
-such that \texttt{e ⊢ f ⊏ g}.
-\end{prop}
-\begin{proof}
-  The proof relies on Requirement \ref{req:diff-specs} and Proposition
-  \ref{prop:diff-correct} (requirements and specifications of
-  \texttt{diff}).
-  %
-  By induction on \texttt{y ⊢ α ⊏ β} we locate \texttt{f : u ⟼ ⟨ α ⟩}
-  in \texttt{e}. 
-  %
-  By Proposition \ref{prop:data-retention} it follows that there
-  exists \texttt{g : v ⟼ ⟨ β ⟩} in the tail of \texttt{e}.
-\end{proof}
-We again omit the dual property for \emph{source} nodes and object.
+% If \texttt{α} precedes \texttt{β} in the source object of script
+% \texttt{e}, then one of the following holds:
+%     \begin{itemize}
+%     \item Node \texttt{α} is deleted in \texttt{e};
+%     \item Node \texttt{β} is deleted in \texttt{e};
+%     \item Node \texttt{α} is mapped to some node \texttt{γ} and node
+%       \texttt{β} is mapped to some node \texttt{φ}, such that node
+%       \texttt{γ} comes before node \texttt{φ} in the target object.
+%     \end{itemize}
 
-    % We now have all the lemmas to prove the \emph{order invariant}
-    % theorem, which ensures that the edit script data type preserves
-    % the depth-first order of the source (target) objects.
-    %
-We now prove our main theorem, which ensures that
-\texttt{diff} preserves the relative order of nodes in the
-source (target) objects.
+% We now prove our main theorem, which ensures that
+% \texttt{diff} preserves the relative order of nodes in the
+% source (target) objects.
+% %
 %
-Since nodes may also be deleted the property sees also these cases,
-namely if node \texttt{α} precedes \texttt{β} in the source object of
-script \texttt{e}, then one of the following holds:
-    \begin{itemize}
-    \item Node \texttt{α} is deleted in \texttt{e};
-    \item Node \texttt{β} is deleted in \texttt{e};
-    \item Node \texttt{α} is mapped to some node \texttt{γ} and node
-      \texttt{β} is mapped to some node \texttt{φ}, such that node
-      \texttt{γ} comes before node \texttt{φ} in the target object.
-    \end{itemize}
-%
-    We show only the theorem about the \emph{source} object, because
-    the other is symmetrical.
+    % We show only the theorem about the \emph{source} object, because
+    % the other is symmetrical.
 \begin{thm}[\texttt{diff} is OP]
-  Let \texttt{x} and \texttt{y} be heterogeneous lists and \texttt{e}
-  an edit script, such that \texttt{e = diff x y}. Let also \texttt{α}
-  and \texttt{β} be nodes such that \texttt{x ⊢ α ⊏ β} then either
-  \texttt{e ⊢ ⟨ α ⟩ ⟼ ⊥} or \texttt{e ⊢ ⟨ β ⟩ ⟼ ⊥} or there exists nodes
-  \texttt{γ} and \texttt{φ} such that \texttt{e ⊢ ⟨ α ⟩ ⟼ ⟨ γ ⟩},
-  \texttt{e ⊢ ⟨ β ⟩ ⟼ ⟨ φ ⟩} and \texttt{y ⊢ γ ⊏ φ}.
+Let \texttt{e = diff x y} and nodes \texttt{α} and \texttt{β},
+such that \texttt{α} precedes \texttt{β} in \texttt{x} (\texttt{y}).
+Then one of the following holds.
+\begin{itemize}
+\item Node \texttt{α} is deleted in \texttt{e}.
+\item Node \texttt{β} is deleted in \texttt{e}.
+\item Node \texttt{α} is mapped to some node \texttt{γ}, node
+  \texttt{β} is mapped to some node \texttt{φ}, such that
+  \texttt{γ} comes before node \texttt{φ} in \texttt{y}.
+  % \texttt{e ⊢ ⟨ α ⟩ ⟼ ⊥} or \texttt{e ⊢ ⟨ β ⟩ ⟼ ⊥} or there exists
+  % nodes \texttt{γ} and \texttt{φ} such that \texttt{e ⊢ ⟨ α ⟩ ⟼ ⟨ γ
+  %   ⟩}, \texttt{e ⊢ ⟨ β ⟩ ⟼ ⟨ φ ⟩} and \texttt{y ⊢ γ ⊏ φ}.
+\end{itemize}
 \end{thm}
-\begin{proof}
-  By Proposition \ref{prop:order-preserving-embedding} there are edits
-  \texttt{f : ⟨ α ⟩ ⟼ u} and \texttt{g : ⟨ β ⟩ ⟼ v}, such that
-  \texttt{e ⊢ f ⊏ g}.
-  %
-  By case analysis either \texttt{u = ⊥} or \texttt{v = ⊥} or \texttt{u = ⟨ γ ⟩}
-  and \texttt{v = ⟨ Φ ⟩}. In the first (second) case \texttt{α} (\texttt{β}) is deleted and we are done.
-  In the third case they are both updated, i.e.\ \texttt{e ⊢ ⟨ α ⟩ ⟼ ⟨ γ ⟩} and
-  \texttt{e ⊢ ⟨ β ⟩ ⟼ ⟨ φ ⟩}.
-  %
-  By Proposition \ref{prop:order-preserving-target-fun} we deduce that
-  \texttt{⟦ e ⟧ ⊢ γ ⊏ Φ} and by Requirement \ref{req:diff-specs} and
-  Proposition \ref{prop:diff-correct} (requirements and specifications
-  of \texttt{diff}) it follows that \texttt{y ⊢ γ ⊏ Φ}.
-\end{proof}
+% \begin{proof}
+%   By Proposition \ref{prop:order-preserving-embedding} there are edits
+%   \texttt{f : ⟨ α ⟩ ⟼ u} and \texttt{g : ⟨ β ⟩ ⟼ v}, such that
+%   \texttt{e ⊢ f ⊏ g}.
+%   %
+%   By case analysis either \texttt{u = ⊥} or \texttt{v = ⊥} or \texttt{u = ⟨ γ ⟩}
+%   and \texttt{v = ⟨ Φ ⟩}. In the first (second) case \texttt{α} (\texttt{β}) is deleted and we are done.
+%   In the third case they are both updated, i.e.\ \texttt{e ⊢ ⟨ α ⟩ ⟼ ⟨ γ ⟩} and
+%   \texttt{e ⊢ ⟨ β ⟩ ⟼ ⟨ φ ⟩}.
+%   %
+%   By Proposition \ref{prop:order-preserving-target-fun} we deduce that
+%   \texttt{⟦ e ⟧ ⊢ γ ⊏ Φ} and by Requirement \ref{req:diff-specs} and
+%   Proposition \ref{prop:diff-correct} (requirements and specifications
+%   of \texttt{diff}) it follows that \texttt{y ⊢ γ ⊏ Φ}.
+% \end{proof}
 
-We now generalize the \emph{order invariant} property to
-\texttt{diff₃}, which guarantees that the relative order of edits in
-each input script is preserved in the merged script.
-%
-Note that the property is restricted only to successful merges and
-furthermore only to \emph{non-identity} edits, since they could 
-ne be excluded in favor of proper changing edits otherwise.
-%
-The property holds intuitively because the merge algorithm does not
-rearrange the input edits, but rather merge them pointwise, retaining
-the original order in the merged script.
-%
-\todo{Better! Give me a take home message!}
-\begin{thm}[\texttt{diff₃} is OP]
-  Let \texttt{e₁}, \texttt{e₂} and \texttt{e₃} be edit scripts such
-  that \texttt{e₁ ⋎ e₂}, \texttt{e₃ = e₁ ⊔₃ e₂} and \texttt{e₃} does not
-  contain conflicts.
-%
-  Let \texttt{f} and \texttt{g} be edits of type \texttt{u ⟼ v} and
-  \texttt{w ⟼ z} such that \texttt{u ≢ v}, \texttt{w ≢ z} and
-  \texttt{e₁ ⊢ f ⊏ g}, then \texttt{e₃ ⊢ f ⊏ g}.
-\end{thm}
-  The theorem holds also with respect to the edits contained in \texttt{e₂}.
+% We now generalize the \emph{order invariant} property to
+% \texttt{diff₃}, which guarantees that the relative order of edits in
+% each input script is preserved in the merged script.
+% %
+% Note that the property is restricted only to successful merges and
+% furthermore only to \emph{non-identity} edits, since they could 
+% ne be excluded in favor of proper changing edits otherwise.
+% %
+% The property holds intuitively because the merge algorithm does not
+% rearrange the input edits, but rather merge them pointwise, retaining
+% the original order in the merged script.
+% %
+% \todo{Better! Give me a take home message!}
+% \begin{thm}[\texttt{diff₃} is OP]
+%   Let \texttt{e₁}, \texttt{e₂} and \texttt{e₃} be edit scripts such
+%   that \texttt{e₁ ⋎ e₂}, \texttt{e₃ = e₁ ⊔₃ e₂} and \texttt{e₃} does not
+%   contain conflicts.
+% %
+%   Let \texttt{f} and \texttt{g} be edits of type \texttt{u ⟼ v} and
+%   \texttt{w ⟼ z} such that \texttt{u ≢ v}, \texttt{w ≢ z} and
+%   \texttt{e₁ ⊢ f ⊏ g}, then \texttt{e₃ ⊢ f ⊏ g}.
+% \end{thm}
+%   The theorem holds also with respect to the edits contained in \texttt{e₂}.
 
 \section{Example Revised}
 \label{sec:haskell}
