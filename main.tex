@@ -400,15 +400,12 @@ of type \texttt{a}, that takes arguments of types given in list
 \texttt{as}.
 %
 For instance constructor \texttt{True} is represented by type \texttt{C []
-  Bool}, because it does not take any argument and produces a Boolean
+  Bool}, because it does not take any argument and produces a boolean
 value.
 %
 Note that also polymorphic data types are supported by this
-representation.
-%
-For example, construct \texttt{Just} takes a single argument of type
-\texttt{a} and yields a value of type \texttt{Maybe a}, for any type
-\texttt{a}, is represented by \texttt{C [a] (Maybe a)}.
+representation, for example, constructor \texttt{Just} is represented
+by type \texttt{C [a] (Maybe a)} for any type \texttt{a}.
 %
 In the following, we will leave type \texttt{C as a} abstract, as a
 module parameter, together with a decidable heterogeneous equality
@@ -420,13 +417,12 @@ operator\footnote{In Agda, \texttt{Set} is the kind of simple types
 module Diff3 (C : List Set → Set → Set) 
               (_≟_ : (α : C as a) (β : C bs b) → Dec (α ≅ β)) where
 \end{minted}
-In Section \ref{sec:haskell} we show how to concretely implement them.
+In Section \ref{sec:haskell}, we show how to concretely implement this
+representation.
 
 \paragraph{Well-Typed Rose Trees}
 Data type \texttt{HTree a} is a tree-like data structure that
-represents an algebraic data type of type \texttt{a}, 
-using constructor denoted by \texttt{C as a}.
-
+represents a value of an algebraic data type of type \texttt{a}.
 \begin{minted}{agda}
   data HTree : Set → Set where
     Node : C as a → HList as → HTree a
@@ -442,10 +438,10 @@ tree.
    _∷_ : HTree a → HList as → HList (a ∷ as)
 \end{minted}
 %
-This representation is type-safe because constructor \texttt{Node}
-requires the same index \texttt{as} in the constructor representation
-and in the heterogeneous list, therefore denoting a well-typed
-application of a constructor to its arguments.
+This representation is type-safe because the constructor
+witness and the heterogeneous list share the same index
+\texttt{as}, therefore denoting a well-typed application of a
+constructor to its arguments.
 % 
 
 \paragraph{Example}
@@ -474,13 +470,12 @@ We graphically depict objects encoded in this universe as trees:
 ]
 \end{figure}
 	
-\todo{Move later?}
-In the following we will use two auxiliary functions to append and
-split heterogeneous lists:
-\begin{minted}{agda}
-_+++_ : HList as → HList bs → HList (as ++ bs)
-hsplit : HList (as ++ bs) → HList as × HList bs
-\end{minted}
+% \todo{Move later?}
+% In the following we will use two auxiliary functions to append and
+% split heterogeneous lists:
+% \begin{minted}{agda}
+% _+++_ : HList as → HList bs → HList (as ++ bs)
+% \end{minted}
 	
 \section{Generic diff}
 Our \texttt{diff3} algorithm relies on a \texttt{diff} algorithm, used
@@ -493,8 +488,8 @@ progressively transform one into the other.
 More precisely an edit script is a list of edits, that either insert,
 delete, or replace the nodes of the input objects.
 %
-We firstly describe a simply typed version of edit and edit scripts and
-then add indexes to make them well-typed.
+We firstly describe a simply typed version of edit and edit scripts
+and then refine them to guarantee type-safety.
 
 \subsection{Edit Operations}
 An edit operation is a mapping \texttt{u ⟼ v}, where \texttt{u} and
@@ -506,46 +501,9 @@ A value is an optional node, i.e.  \texttt{Value as a = Maybe (C as
 %
 For brevity, we write \texttt{⊥} for an empty value and \texttt{⟨ α ⟩}
 for a value containing node \texttt{α}.
-%
-
-%         In the type \texttt{Val as a} the parameters \texttt{as} and
-%         \texttt{a} witness the possible presence of a node \texttt{C
-%           as a}, that given objects of types \texttt{as} will produce
-%         an object of type \texttt{a}.
-%         %
-%         The drawback of this encoding is that \texttt{as} and
-%         \texttt{a} are valid input and output approximations only if a
-%         node is in fact present.
-%         %
-%         On the other hand, an indexed data type can give a much more
-%         accurate approximation:
-% \begin{minted}{agda}
-% data Val : List Set → List Set → Set where
-%   ⊥ : Val [] []
-%   ⟨_⟩ : C as a → Val as [ a ] 
-% \end{minted}
-%   The data type \texttt{Val as bs} is indexed by two lists
-%   \texttt{as} and \texttt{bs} that assume only certain values,
-%   depending on the presence of a node, ensuring that they always
-%   accurately approximate inputs and outputs regardless of the
-%   presence of a node.
-% %
-%   More precisely the empty value \texttt{⊥} corresponds to
-%   \texttt{nothing} and since it does not consume any input and produce
-%   nothing, both its lists are empty.
-% %
-%   Value \texttt{⟨ α ⟩} corresponds to \texttt{just α} and represents a
-%   non-empty value that contains node \texttt{α : C as a} which
-%   consumes objects of types \texttt{as} and produces a single object
-%   of type \texttt{a}.
-% %
-%   The type \texttt{u ⟼ v} denotes an edit that maps \emph{source}
-%   value \texttt{u} into \emph{target} value \texttt{v}.
-%
-  
-All the possible combinations of source and target value states, i.e.\
+% 
+All the possible combinations of source and target value state, i.e.\
 empty and non-empty, form four different edit operations.
-
 \begin{minted}{agda}
 data _⟼_ : Value as a → Value bs a → Set where
   Nop : ⊥ ⟼ ⊥
@@ -554,12 +512,12 @@ data _⟼_ : Value as a → Value bs a → Set where
   Upd : (α : C as a) (β : C bs a) → ⟨ α ⟩ ⟼ ⟨ β ⟩
 \end{minted}
 The \texttt{Nop} edit is a no-operation, that will be
-used in Section \ref{subsec:alignment}, to \emph{align} edit scripts
+used in Section \ref{subsec:alignment}, to \emph{align} edit scripts.
 %
 Edit \texttt{Del α} deletes node \texttt{α}, which is mapped to
 the empty value \texttt{⊥}, since it lacks a target node.
 %
-Similarly edit \texttt{Ins α}, inserts node \texttt{α}, which
+Similarly, edit \texttt{Ins α} inserts node \texttt{α}, which
 then lacks a source node, hence it has the empty value \texttt{⊥} 
 as source value.
 %
@@ -570,7 +528,7 @@ Note that there is no explicit copy edit: it is just a special case of
 update, in which the source and target nodes happen to be the same.
 %
 Edits that have the same \emph{source} and \emph{target} value are
-called \emph{identity} edits ---observe that they have type \texttt{v
+called \emph{identity} edits---they have type \texttt{v
   ⟼ v}.
 %
 Node copy and no-operation fall into this category.
@@ -582,20 +540,30 @@ semantics.
 %
 \todo{An implementation should take care of this. Do we?}
 	
-\subsection{Edit Script}
+\subsection{Untyped Edit Script}
 \label{subsec:edit-script}
 An edit script is a finite list of edit operations, that describe how
 to transform a \emph{source} object into a \emph{target} object.
 %
-The objects are not plain trees, but rather \emph{lists} of trees,
-which are used as \emph{stacks} of unprocessed nodes, pushed and
-popped according to the edit operations found in the script.
+\begin{minted}{agda}
+data ES : Set where
+  [] : ES
+  _::_ : v ⟼ w → ES → ES
+\end{minted}	
+%
+More precisely the script traverse and process their nodes
+by traversing the objects in depth-first preorder.
+%
+Note however that we do not transform plain trees, but rather
+\emph{lists} of trees, which are used as \emph{stacks} of unprocessed
+nodes, pushed and popped according to the edit operations found in the
+script.
 %
 We work with lists of trees because certain edits, when applied to
 nodes in a tree, will intrinsically result in multiple trees.
 %
-For instance, deleting the root node to tree \texttt{ht} from Section
-\ref{section:universe} will produce two trees (\texttt{Node
+For instance, deleting the root node to tree \texttt{ht}, from Section
+\ref{section:universe}, will produce two trees (\texttt{Node
   \textcolor{magenta}{1} []} and \texttt{Node (\textcolor{blue}{::})
   [Node \textcolor{magenta}{2} [], Node \textcolor{blue}{[]} []]}):
 
@@ -615,75 +583,96 @@ For instance, deleting the root node to tree \texttt{ht} from Section
 \end{minipage}%
 \end{figure}
 
-More precisely each tree in the source and target stacks is traversed
-and consumed in depth-first preorder by the edits of the script. 
 %
 Informally, a delete (insert) edit pops the root of the tree from the
 top of the \emph{source} (\emph{target}) stack and pushes its children
 instead.
 %
-An update edit pops and pushes from both stacks and a no-operation
-edit leave both stacks unchanged.
+An update behaves as a simultaneous delete and insert and
+a no-operation leaves both of the stacks unchanged.
 %
-In principle it should be possible to retrieve the source and target
-objects from a script, by inverting the process that we have just
-described.
+In principle, it should be possible to define functions that
+retrieves the source and target objects from a script, by
+\emph{inverting} the process that we have just described.
 %
-Unfortunately an un-typed edit script does not guarantee that its
-operations will produce well-typed tree and not even that they can
-be performed at all.
+Unfortunately, the lack of types already makes it hard to even assign a suitable
+type to a function \texttt{⟪\_⟫ : ES → HList ?}:
+what type should we put instead of the question mark?
 %
-For instance the top of the stack might contain trees of the wrong
-type, that do not match those of the constructor at hand, or it might
-try to pop trees from an empty stack.
+Crucially, an untyped edit script does not guarantee that its
+operations will produce well-typed trees and not even that they can be
+performed at all.
+%
+The top of the stack might contain trees of the wrong type, that do
+not match those of the constructor at hand, or it might try to pop
+trees from an empty stack.
+%
+For instance, edit script \texttt{[Ins (\textcolor{blue}{::}) , Ins
+  \textcolor{magenta}{0}]} would generate a target list containing an
+ill-typed tree, whose root node lacks a second child:
+\begin{figure}[!h]
+\centering
+\Tree
+[.\texttt{(\textcolor{blue}{::})}
+   [.\texttt{\textcolor{magenta}{0}} ]
+]
+\end{figure}
+
 %
 Guaranteeing such invariants is the bread and butter of
 dependently-typed programming, as we proceed to show in the next
 section.
 
-\todo{Type-safe version}
+\subsection{Type-Safe Edit Script}
+In order to make edit script type-safe, we firstly refine the type of
+\emph{values}, to correctly approximate the trees popped and pushed on
+a stack, with their index and secondly annotate the edit script data
+type to ensure type-safety through them.
 
-%  while
-% preserving type-safety. \todo{Explain more!}
+\paragraph{Value}
+Given a source (target) value of type \texttt{Value as a}, an edit
+will pop trees of types \texttt{as} and push a tree of type \texttt{a}
+on the source (target) stack, if and only if a node is in fact
+present, otherwise the corresponding stack will be left unchanged.
+%
+The following indexed data type correctly approximate inputs and
+outputs, regardless of the presence of the node.
+\begin{minted}{agda}
+data Value : List Set → List Set → Set where
+  ⊥ : Value [] []
+  ⟨_⟩ : C as a → Value as [ a ] 
+\end{minted}
+Observe that also the second index is a list and both of them are
+empty, for the empty value.
+%
 
-% \begin{minted}{agda}
-% data ES : List Set → List Set → Set where
-%   [] : ES [] []
-%   _::_ : {v : Val as bs} {w : Val cs ds} → v ⟼ w → 
-%           ES (as ++ xs) (cs ++ ys) → ES (bs ++ xs) (ds ++ ys)
-% \end{minted}	
-% 	An edit script of type \texttt{ES xs ys} transforms
-% 	a \emph{source} object of type \texttt{HList xs} into
-% 	a \emph{target} object of type \texttt{HList ys}. 
-%         The indexes of the edit script are used as stacks by respectively the 
-%         \emph{source} and \emph{target} values of each edit contained in the script.
-%         This encoding is type-safe because the input list of the \emph{source} and 
-%         \emph{target} values are present on top of respectively the input and output 
-%         stack of the remaining script and their output lists are 
-%         found on top of the stacks of the resulting script.
+\paragraph{Edit Script}
+The edit script data type is still a list of edits, but it is now
+indexed with type-level lists, which restrict the shape of the source
+and target stacks, ensuring type-safety.
+%
+\begin{minted}{agda}
+data ES : List Set → List Set → Set where
+  [] : ES [] []
+  _::_ : {v : Value as bs} {w : Value cs ds} → v ⟼ w → 
+          ES (as ++ xs) (cs ++ ys) → ES (bs ++ xs) (ds ++ ys)
+\end{minted}	
+An edit script of type \texttt{ES xs ys} transforms a \emph{source}
+list of type \texttt{HList xs} into a \emph{target} list of type
+\texttt{HList ys}.  
+%
+The cons constructor takes an edit, whose source (target) value
+consumes \texttt{as} (\texttt{cs}) and yields \texttt{bs}
+(\texttt{ds}).
+%
+The fact that the lists of the rest of the edit script have prefix
+\texttt{as} and \texttt{cs}, ensure that it will be possible to pop
+trees of the right type from the source and target object
+respectively, and replace them by constructing and pushing well-typed
+trees of types \texttt{bs} and \texttt{ds}.
 
-        \paragraph{Example}
-
-        The following edit script encodes the differences between \texttt{[0]} 
-        and \texttt{[1,2]}: \todo{Use figure?}
-
-\begin{Verbatim}[commandchars=\\\{\}]
-e : ES [List Int] [List Int]
-e = [Upd (::) (::), \textcolor{magenta}{Upd 0 1}, \textcolor{blue}{Ins (::)} , \textcolor{blue}{Ins 2}, Upd [] []]
-\end{Verbatim}
-
-The script embeds nodes from the source object into nodes of the target object.
-Figure \ref{fig:embedding} shows the embedding of \texttt{e}.
-
-\begin{figure*}[!t]
-\centering
-\includegraphics[scale=.27]{embedding2}
-\caption{The embedding induced by \texttt{[Upd (::) (::), \textcolor{magenta}{Upd 0 1}, \textcolor{blue}{Ins (::)} , \textcolor{blue}{Ins 2}, Upd [] []]}}
-\label{fig:embedding}
-\end{figure*}
-
-	The following function retrieves the source object from an edit 
-        script:			
+With more precise types, we can define \emph{source} function
+\texttt{⟪\_⟫}, which retrieves the source object from an edit script:
 \begin{minted}{agda}
 ⟪_⟫ : ES as bs → HList as
 ⟪ [] ⟫ = []
@@ -694,30 +683,43 @@ Figure \ref{fig:embedding} shows the embedding of \texttt{e}.
 ⟪ Upd α β ∷ e ⟫ with hsplit ⟪ e ⟫
 ... | hs₁ , hs₂ = Node α hs₁ ∷ hs₂
 \end{minted}
-	No-operations and insert edits have no source node,
-        because their source value is empty ⊥, therefore
-        the source function is simply called on the tail
-        of the script.
-        %        
-        Delete and update edits instead alter a node of the source
-        object, therefore that node is output as part of the source
-        object.
-        %
-        \todo{Stress on well-typedness of the construction!  HList is
-          not just a mere list, but a list of trees!}
-        %
-        The source function is called recursively on the rest of the
-        edit script producing a list, whose prefix correspond to the
-        subtrees of the top node. Using the function \texttt{hsplit}
-        the list is decomposed accordingly in two parts, which are
-        then assembled appropriately.
-	%
-	Dually we define a function that retrieves the target object.
-	Since it is analogous to the previous we give only its signature:
-	
+%
+Source nodes are present in delete and update edits ---the other cases
+are trivial.
+% 
+Function \texttt{hsplit : HList (as ++ bs) → HList as × HList bs}
+splits an heterogeneous list in two parts according to its type and it
+is used to \emph{pop} the arguments (\texttt{hs₁}) of the source
+constructor (\texttt{α}) , from the rest of the list.
+%
+Note that the type of the cons constructor guarantees that the tree
+\texttt{Node α hs₁} is well-typed.
+%
+Dually, we define the \emph{target} function, whose implementation is
+analogous and thus omitted:
 \begin{minted}{agda}
 ⟦_⟧ : ES as bs → HList bs
 \end{minted}
+
+\begin{figure*}[!t]
+\centering
+\includegraphics[scale=.27]{embedding2}
+\caption{The embedding induced by \texttt{[Upd (::) (::), \textcolor{magenta}{Upd 0 1}, \textcolor{blue}{Ins (::)} , \textcolor{blue}{Ins 2}, Upd [] []]}}
+\label{fig:embedding}
+\end{figure*}
+
+\paragraph{Example}
+While the previous edit script is now ill-typed, the following script
+encodes the differences between two lists of integers, namely \texttt{[0]} and \texttt{[1,2]}, as witnessed by its richer type:
+\begin{Verbatim}[commandchars=\\\{\}]
+e : ES [List Int] [List Int]
+e = [Upd (::) (::), \textcolor{magenta}{Upd 0 1}, \textcolor{blue}{Ins (::)} , \textcolor{blue}{Ins 2}, Upd [] []]
+\end{Verbatim}
+
+Figure \ref{fig:embedding} shows that the script embeds nodes of the
+source tree into those of the target object.
+%
+Finding a ``good'' embedding is the goal of \texttt{diff}.
 
 \subsection{Diff Algorithm}
 \label{subsec:diff-algo}
