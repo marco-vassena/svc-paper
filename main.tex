@@ -1445,6 +1445,7 @@ may bear the same change independently (axiom \texttt{Idem}).
 % \end{prop}
 We now formally state the \emph{data origin} and \emph{edit origin} property.
 \begin{prop}[Data and Edit Origin]
+\label{prop:sanity}
 Let \texttt{α} be a node and \texttt{e = diff x y}:
 \begin{itemize}
 \item \texttt{α ∈ x} iff there exits \texttt{f : ⟨ α ⟩ ⟼ v}, such that
@@ -1487,6 +1488,29 @@ Let \texttt{α} be a node and \texttt{e = diff x y}:
 % that ensures that every edit present in the merged script comes from
 % either
 % of the input scripts.
+
+Unfortunately, the properties proved in Proposition \ref{prop:sanity}
+are not enough to characterize a useful merge algorithm.
+%
+Crucially, \emph{Edit Origin} asserts that if an edit is presented in
+the merged script, then it is part of either the input scripts, but it
+does not guarantee that \texttt{f} will actually end up in the merged
+script.
+%
+A merge operator that merely returns an empty script (\texttt{e₁ ⊔₃ e₂
+  = []}) would satisfy this property, but clearly it does not do
+anything useful at all.
+%
+Proposition \ref{prop:maximality} proves \emph{maximality}, which
+forces the merge operator to yield every edit that can be obtained
+by merging aligned edits from the input scripts.
+
+\begin{prop}[Maximality]
+  \label{prop:maximality}
+  For every pair of aligned edit scripts \texttt{f} and \texttt{g},
+  such that \texttt{f ∈ e₁}, \texttt{g ∈ e₂}, if \texttt{f ⊔ g ↧ h}
+  then \texttt{h ∈ (e₁ ⊔₃ e₂)}.
+\end{prop}
 
 \subsection{Persistence}
 Persistence is a property that establishes how conflicting edits,
@@ -1557,32 +1581,6 @@ triggers a conflict (\texttt{c ∈ e₃}).
 %     The theorem holds also when the edit belongs to the other script and
 %     the proof is entirely symmetrical.
    		
-    \subsection{Maximality}
-    \todo{Not interesting, but desirable! cite Pierce}
-    Another interesting property of our merge algorithm is
-    \emph{maximality}, which guarantees that whenever it is possible
-    to reconcile two edits from the input scripts, then the merged
-    edit must be included in the merged script.
-    %
-    Theorem \ref{thm:max} shows that every successful merge is
-    \emph{maximal}.
-
-    \paragraph{Example} 
-    Consider scripts \texttt{e₁*} and \texttt{e₂*} from section
-    \ref{subsec:alignment}.
-    %
-    The merged edit \texttt{e₁* ⊔₃ e₂* = [Ins (::), Ins 0, Cpy (::),
-      Cpy 1, Ins (::), Ins 2 , Cpy []]}, is maximal because it
-    contains all the edits obtained by merging them pairwise.
-    %
-    \begin{thm}[Maximality]
-      \label{thm:max}
-      Let \texttt{e₁}, \texttt{e₂} and \texttt{e₃} be edit scripts
-      such that \texttt{e₁ ⋎ e₂}, \texttt{e₃ = e₁ ⊔₃ e₂} and
-      \texttt{e₃} does not contain any conflict. Then \texttt{e₃} is
-      maximal with respect to \texttt{e₁} and \texttt{e₂}.
-    \end{thm}
-
     \subsection{Structural  Invariants}
     \todo{Start with the problem: with structured data, there
     nodes could be rearranged in arbitrary ways to avoid conflicts.
