@@ -825,11 +825,13 @@ define a sound merging semantics.
 
 \subsection{Alignment}
 \label{subsec:alignment}
-\todo{Explain: why do we even need alignment?}  \todo{Add proper
-  definition of alignment, drop data-type} 
 %
 \emph{Alignment} is a relation that captures corresponding parts of
 objects, that should be merged.
+%
+Trying to merge unrelated parts is likely to fail, resulting in
+spurious conflicts, therefore alignment affects immensely the
+precision and reliability of \texttt{diff3}.
 %
 In our framework, it is convenient to use \emph{edits} to identify
 these parts.
@@ -848,15 +850,15 @@ More formally, we define \emph{alignment} as follows.
     pairwise aligned.
 \end{itemize}
 \end{definition}
-Note that Definition \ref{def:align} is about \emph{values}, not only
-nodes: any two edits \texttt{u ⟼ v} and \texttt{u ⟼ w} are aligned.
+Definition \ref{def:align} is about \emph{values}, not only nodes: any
+two edits \texttt{u ⟼ v} and \texttt{u ⟼ w} are aligned.
 %	
 Intuitively, two edit scripts that have the same \emph{source} object
 can be aligned, because they share the same collection of
 \emph{source} nodes.
 %
-However, insert edits may break alignment because they introduce empty
-values and can occur at any point in the scripts.
+However, insert edits may break alignment, because they can occur at
+any point in the scripts, introducing \emph{empty} values.
 
 \paragraph{Example}
 Consider the lists \texttt{x = [1]}, \texttt{y = [0,1]} and \texttt{z
@@ -892,7 +894,7 @@ In the following, we use notation \texttt{e ⊑ e*} to denote that edit
 script \texttt{e*} extends script \texttt{e} with a finite number of
 \texttt{Nop} edits.
 %
-Note that \texttt{Nop} edits change neither the \emph{source} nor the
+Observe that, \texttt{Nop} edits change neither the \emph{source} nor the
 \emph{target} of the edit script, therefore it is an harmless
 extension.
 \begin{prop}[Equivalent Extension]
@@ -900,17 +902,27 @@ extension.
   \texttt{ ⟪ e ⟫ ≡ ⟪ e* ⟫}
 \end{prop}
 
-No-operations are automatically aligned with inserts, because they
-both have the empty value \texttt{⊥} as \emph{source} and in addition
-they cannot introduce spurious conflicts because they are
-\emph{identity} edits.
-         
+Proposition \ref{prop:align-ext} guarantees that we can always
+\texttt{Nop}-extend scripts that have the same source object.
+%
+As a result, we can systematically apply this technique in
+\texttt{diff3}.
+%
 \begin{prop}[Alignment via Extension]
+\label{prop:align-ext}
   Let \texttt{e₁ = diff x y} and \texttt{e₂ = diff x z}, then there
   exists edit scripts \texttt{e₁*} and \texttt{e₂*}, such that
   \texttt{e₁ ⊑ e₁*}, \texttt{e₂ ⊑ e₂*}, and \texttt{e₁*} and
-  \texttt{e₂*} are algined.
+  \texttt{e₂*} are aligned.
 \end{prop}
+Adding no-operations operations to align scripts is effective, because
+\texttt{Nop} always aligns with \texttt{Ins} --- they both have the
+empty value \texttt{⊥} as source.
+%
+Furthermore, it is also an attractive technique, because no-operations
+cannot introduce new conflicts, since they are \emph{identity} edits.
+
+
 %         \paragraph{Weak Alignment}\todo{Drop weak alignment, give only Proposition}
 %         Two edit scripts are \emph{weakly aligned} \texttt{e₁ \textasciitilde\ e₂} 
 %         if they admit extensions that are \emph{aligned}:
