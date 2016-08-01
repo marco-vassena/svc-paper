@@ -788,132 +788,144 @@ Requirement \ref{req:diff-specs}.
 % \end{minted}
 
 \section{Generic diff$_3$}
-	The \texttt{diff3} algorithm takes as input three objects, the original
-	version called \emph{base} and two new replicas, and it outputs an
-	edit script that combines the changes between them.
-	However the algorithm does not work directly on the replicas, but relies
-	on a \texttt{diff} algorithm to compute two edit scripts that describe
-	the changes from base to each of the new versions.
-	It then merges the edits contained in the two edit scripts and produces
-	an edit script, whose \emph{source} is the base object and whose 
-	\emph{target} is the merged object.
-	Nevertheless, not all edits can be automatically reconciled.
-	In these cases a conflict is detected and reported to the user, who has
-	to solve it manually.
-        \todo{More discussion about different design choices, persistent etc ...}
+The \texttt{diff3} algorithm takes as input three objects, the
+original version called \emph{base} and two new replicas, and it
+outputs an edit script that combines the changes between them.
+%
+However, the algorithm does not work directly on the replicas, but
+relies on a \texttt{diff} algorithm to compute two edit scripts that
+describe the changes from base to each of the new versions.
+%
+It then generates an edit script by merging the edits contained in
+edit scripts: the \emph{source} of the merged script is the base
+object and the \emph{target} is the merged object.
+%
+Nevertheless, edits cannot always be automatically reconciled: a
+conflict is triggered in this situation and reported to the user, who
+has to solve it manually. 
+%
+\todo{More discussion about different design choices, persistent etc
+  ...}
 		
-        \todo{Remark that the three-way technique is attractive and
-          we simply want to apply it to structured data. Maybe in intro?}
-	The merging technique employed in the \texttt{diff3} algorithm for
-	algebraic data types consists in applying the three-way merge algorithm
-	at the node level. 
-	Informally the algorithm compares corresponding parts 
-	of two objects and of their base version.
-	When two parts disagree, the base version is examined:
-	if all of them are different a conflict is detected, 
-        otherwise the version that changed from base is chosen.
+\todo{Remark that the three-way technique is attractive and we simply
+  want to apply it to structured data. Maybe in intro?}
+%
+The merging technique employed in our \texttt{diff3} algorithm for
+algebraic data types consists in applying the three-way merge
+algorithm at the node level.
+%
+Informally the algorithm compares corresponding parts of two objects
+and of their base version, when two parts disagree, the base version
+is examined: a conflict is detected if each version is different,
+otherwise the version that changed from base is chosen.
 	
-	To put this strategy on a formal footing, we give precise definitions
-	of corresponding parts and conflicts.
-	On top of these, we define a sound merging semantics.
+To put this strategy on a formal footing, we give precise definitions
+of corresponding parts of objects and conflicts, on top of which, we
+define a sound merging semantics.
 
-	\subsection{Alignment}
-        \label{subsec:alignment}
-        \todo{Explain: why do we even need alignment?}
-        \todo{Add proper definition of alignment, drop data-type}
-	We call two edit operations \emph{aligned} if they share the
-        same \emph{source} value.
-        %
-        We naturally extend the notion of alignment to edit
-        scripts.
-        %
-        Two edit scripts are \emph{aligned} if all their edits are
-        pairwise aligned. The following data type denotes aligned edit
-        scripts:
-\begin{minted}{agda}
-data _⋎_ : ES as bs → ES as cs → Set where
-  nil : [] ⋎ []
-  cons : (f : u ⟼ v) (g : u ⟼ w) → e₁ ⋎ e₂ → (f ∷ e₁) ⋎ (g ∷ e₂)
-\end{minted}
-	The definition is recursive: two edit scripts are aligned if
-        either they are both empty or their heads and their tails are
-        both aligned.
-        %
-	Note that we do not need an auxiliary data type to encode edit
-        alignment since this property can be enforced directly with
-        their types.
-        %
-	For example, the \texttt{cons} constructor accepts only aligned
-        edits because it requires them to have the same source value
-        \texttt{u}.
-	
-        Intuitively, two edit scripts that have the same \emph{source}
-        object can be aligned, because they share the same collection
-        of \emph{source} nodes.
-        %
-        However, insert edits might break alignment because they can
-        occur at different point in the scripts.
+\subsection{Alignment}
+\label{subsec:alignment}
+\todo{Explain: why do we even need alignment?}  \todo{Add proper
+  definition of alignment, drop data-type} 
+%
+\emph{Alignment} is a relation that captures corresponding parts of
+objects, that should be merged.
+%
+In our framework, it is convenient to use \emph{edits} to identify
+these parts.
+%
+In fact, while their source values belong to the same object
+(\emph{base}), their target values belong to different replicas, which
+we want to merge.
+%
+More formally, we define \emph{alignment} as follows.
+\begin{definition}[Edit and Script Alignment]
+\mbox{}
+\label{def:align}
+\begin{itemize}
+  \item Two edit operations are aligned, if and only if they have the same source value.
+  \item Two edit scripts are aligned, if and only if their edits are
+    pairwise aligned.
+\end{itemize}
+\end{definition}
+Note that Definition \ref{def:align} is about \emph{values}, not only
+nodes: any two edits \texttt{u ⟼ v} and \texttt{u ⟼ w} are aligned.
+%	
+Intuitively, two edit scripts that have the same \emph{source} object
+can be aligned, because they share the same collection of
+\emph{source} nodes.
+%
+However, insert edits may break alignment because they introduce empty
+values and can occur at any point in the scripts.
 
-        \paragraph{Example}
-        Consider the list \texttt{x = [1]}, \texttt{y = [0,1]} and \texttt{z = [1,2]}.
-        The edit script \texttt{e₁} and \texttt{e₂} represent the \texttt{diff} between \texttt{x} and
-        respectively \texttt{y} and \texttt{z} \footnote{In this example \texttt{Cpy α} stands for \texttt{Upd α α}}.
-
+\paragraph{Example}
+Consider the lists \texttt{x = [1]}, \texttt{y = [0,1]} and \texttt{z
+  = [1,2]}.
+%
+Edit scripts \texttt{e₁} and \texttt{e₂} represent the \texttt{diff}
+between \texttt{x} and respectively \texttt{y} and \texttt{z}
+\footnote{In this example \texttt{Cpy α} stands for \texttt{Upd α α}}.
 \begin{minted}{agda}
 e₁ e₂ : ES [ List Int ] [ List Int ]
 e₁ = [Ins  (::), Ins  0, Cpy (::), Cpy 1, Cpy []]
 e₂ = [Cpy (::), Cpy 1, Ins  (::), Ins  2, Cpy []] 
 \end{minted}       
-
+%
 % \begin{minted}{agda}
 % e₁ e₂ : ES [ List Int ] [ List Int ]
 % e₁ = [Ins (::), Ins 1, Cpy (::), Cpy 1,                 Cpy []]
 % e₂ = [                Cpy (::), Cpy 1, Ins (::), Ins 2, Cpy []] 
 % \end{minted}       
-        The two edits are not aligned because their first edits are not aligned, since \texttt{⊥ ≢ ⟨ :: ⟩}
-        where \texttt{⊥} is the source value of \texttt{Ins (::)} in \texttt{e₁} and \texttt{⟨ :: ⟩} is
-        the source value of \texttt{Cpy (::)} in \texttt{e₂}.
+The scripts are \emph{not} aligned, because their first edits are not,
+namely \texttt{⊥ ≢ ⟨ :: ⟩}, where \texttt{⊥} is the source value of
+\texttt{Ins (::)} in \texttt{e₁} and \texttt{⟨ :: ⟩} is the source
+value of \texttt{Cpy (::)} in \texttt{e₂}.
 
-        Interestingly alignment can be recovered by inserting no-operation edits in 
-        these points. 
+Interestingly, alignment can be recovered by inserting no-operation
+edits in these points.
 \begin{minted}{agda}
 e₁* = [Ins (::), Ins 0, Cpy (::), Cpy 1, Nop   , Nop , Cpy []]
 e₂* = [Nop   , Nop , Cpy (::), Cpy 1, Ins (::), Ins 2, Cpy []] 
 \end{minted}
-        \todo{Proper definition of \texttt{⊴} and proper symbol}
-        The relation \texttt{e ⊴ e*} denotes that the edit script
-        \texttt{e*} extends \texttt{e} with a finite number of
-        \texttt{Nop} edits.
 
-        Note that the \texttt{Nop} edit change neither the
-        \emph{source} nor the \emph{target} of the edit script,
-        therefore it is an harmless extension.
-        
+In the following, we use notation \texttt{e ⊑ e*} to denote that edit
+script \texttt{e*} extends script \texttt{e} with a finite number of
+\texttt{Nop} edits.
+%
+Note that \texttt{Nop} edits change neither the \emph{source} nor the
+\emph{target} of the edit script, therefore it is an harmless
+extension.
 \begin{prop}[Equivalent Extension]
-Let \texttt{e} and \texttt{e*} be two edit scripts such that \texttt{e ⊴ e*}, then
-\texttt{⟦ e ⟧ ≡ ⟦ e* ⟧} and \texttt{ ⟪ e ⟫ ≡ ⟪ e* ⟫}
+  If \texttt{e ⊑ e*}, then it holds that \texttt{⟦ e ⟧ ≡ ⟦ e* ⟧} and
+  \texttt{ ⟪ e ⟫ ≡ ⟪ e* ⟫}
 \end{prop}
 
-No-operations are automatically aligned with inserts because they both
-share the empty value \texttt{⊥} as \emph{source} and furthermore they
-may not introduce spurious conflicts because they are \emph{identity}
-edits.
+No-operations are automatically aligned with inserts, because they
+both have the empty value \texttt{⊥} as \emph{source} and in addition
+they cannot introduce spurious conflicts because they are
+\emph{identity} edits.
          
-        \paragraph{Weak Alignment}\todo{Drop weak alignment, give only Proposition}
-        Two edit scripts are \emph{weakly aligned} \texttt{e₁ \textasciitilde\ e₂} 
-        if they admit extensions that are \emph{aligned}:
-\begin{minted}{agda}
-data _~_ (e₁ : ES xs ys) (e₂ : ES xs zs) : Set where
-  WA : e₁ ⊴ e₁* → e₂ ⊴ e₂* → e₁* ⋎ e₂* → e₁ ~ e₂
-\end{minted}
+\begin{prop}[Alignment via Extension]
+  Let \texttt{e₁ = diff x y} and \texttt{e₂ = diff x z}, then there
+  exists edit scripts \texttt{e₁*} and \texttt{e₂*}, such that
+  \texttt{e₁ ⊑ e₁*}, \texttt{e₂ ⊑ e₂*}, and \texttt{e₁*} and
+  \texttt{e₂*} are algined.
+\end{prop}
+%         \paragraph{Weak Alignment}\todo{Drop weak alignment, give only Proposition}
+%         Two edit scripts are \emph{weakly aligned} \texttt{e₁ \textasciitilde\ e₂} 
+%         if they admit extensions that are \emph{aligned}:
+% \begin{minted}{agda}
+% data _~_ (e₁ : ES xs ys) (e₂ : ES xs zs) : Set where
+%   WA : e₁ ⊴ e₁* → e₂ ⊴ e₂* → e₁* ⋎ e₂* → e₁ ~ e₂
+% \end{minted}
 
-        We can now weakly align two edit scripts, that share the
-        same \emph{source} object. The alignment procedure examines the scripts
-        and extend either of them with no-operations, whenever one inserts a 
-        node and the other does not. 
-\begin{minted}{agda}
-align : Diff x y e₁ → Diff x z e₂ → e₁ ~ e₂
-\end{minted}
+%         We can now weakly align two edit scripts, that share the
+%         same \emph{source} object. The alignment procedure examines the scripts
+%         and extend either of them with no-operations, whenever one inserts a 
+%         node and the other does not. 
+% \begin{minted}{agda}
+% align : Diff x y e₁ → Diff x z e₂ → e₁ ~ e₂
+% \end{minted}
 
 	\subsection{Merge Semantics}
         \label{subsec:merge-semantics}
