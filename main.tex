@@ -723,65 +723,69 @@ Finding a ``good'' embedding is the goal of \texttt{diff}.
 
 \subsection{Diff Algorithm}
 \label{subsec:diff-algo}
-The \texttt{diff} algorithm detects differences between two objects
-and has the the following signature: \todo{Discussion about
-  specifications, not minimal to accommodate more diffs}
-\begin{minted}{agda}
-diff : HList as → HList bs → ES as bs
-\end{minted}
-Our model abstracts over the specific \texttt{diff} algorithm used:
-the results proved are valid for a class of diffing algorithms that
-satisfy some basic requirements.
+Our \texttt{diff3} algorithm does not merge objects directly, but like
+its text-based counterpart, relies on a \texttt{diff} algorithm
+as a subroutine to detect changes between them.
+%
+More precisely, a \texttt{diff} algorithm takes two object and produces
+an edit script that describes the differences between them, which is
+then used to compute the merged object by \texttt{diff3}.
+%
+We remark that our \texttt{diff3} algorithm and its formal guarantees,
+do not rely on a specific \texttt{diff} algorithm, but rather are
+valid with any function of type \texttt{diff : HList as → HList bs →
+  ES as bs} that fulfills the following basic requirement.
 
 \begin{req}[\texttt{diff} specifications]
   \label{req:diff-specs}
   A \texttt{diff} algorithm is correct if and only if for any list
-  \texttt{x} and \texttt{y}
-  \center{\texttt{e = diff x y ⇔ x ≡ ⟪ e ⟫ ∧ y ≡ ⟦ e ⟧}}
+  \texttt{x} and \texttt{y} \center{\texttt{e = diff x y ⇔ x ≡ ⟪ e ⟫ ∧
+      y ≡ ⟦ e ⟧}}
 \end{req}
+  % specifications, not minimal to accommodate more diffs}
 %
 This correctness criterion demands that the edit script computed by
 \texttt{diff} transform exactly the source object \texttt{x} into the
 target object \texttt{y}.  (In the specifications \texttt{≡} denotes
 propositional equality.)
 %
-The advantage of reasoning by such specification is that we are not
-bound to a particular \texttt{diff} algorithm when studying the
-properties of \texttt{diff3}, so that arbitrary diffing techniques can
-be used.
+Note that the specification is very permissive: it does not require 
+the edit script to be minimal, not even ``small''.
 %
-\todo{Drop Diff}
-The following data type serves to this purpose: \texttt{Diff x y e} is
-the proof that the edit script \texttt{e} is the result of diffing
-lists \texttt{x} and \texttt{y}.
-\begin{minted}{agda}
-data Diff : HList xs → HList ys → ES xs ys → Set where
-  End : Diff [] [] []
-  Nop : Diff x y e → Diff x y (Nop ∷ e)
-  Del : Diff (x₁ +++ x₂) y e → Diff (Node α x₁ ∷ x₂ ) y (Del α ∷ e)
-  Ins : Diff x (y₁ +++ y₂) e → Diff x (Node β y₁ ∷ y₂) (Ins β ∷ e)
-  Upd : Diff (x₁ +++ x₂) (y₁ +++ y₂) e → 
-        Diff (Node α x₁ ∷ x₂) (Node β y₁ ∷ y₂) (Upd α β ∷ e)
-\end{minted}
+Even though we expect our \texttt{diff3} algorithm to perform better
+with competitive \texttt{diff}s ---they will probably capture changes
+more precisely, the advantage of reasoning by such specification is
+that our results are valid for virtually any \emph{sensible}
+\texttt{diff} algorithm.
+ %
+% The following data type serves to this purpose: \texttt{Diff x y e} is
+% the proof that the edit script \texttt{e} is the result of diffing
+% lists \texttt{x} and \texttt{y}.
+% \begin{minted}{agda}
+% data Diff : HList xs → HList ys → ES xs ys → Set where
+%   End : Diff [] [] []
+%   Nop : Diff x y e → Diff x y (Nop ∷ e)
+%   Del : Diff (x₁ +++ x₂) y e → Diff (Node α x₁ ∷ x₂ ) y (Del α ∷ e)
+%   Ins : Diff x (y₁ +++ y₂) e → Diff x (Node β y₁ ∷ y₂) (Ins β ∷ e)
+%   Upd : Diff (x₁ +++ x₂) (y₁ +++ y₂) e → 
+%         Diff (Node α x₁ ∷ x₂) (Node β y₁ ∷ y₂) (Upd α β ∷ e)
+% \end{minted}
 
-We prove that \texttt{Diff x y e} complies with the specifications of
-\texttt{diff} (Requirement \ref{req:diff-specs}), because \texttt{x}
-and \texttt{y} are uniquely determined by respectively the source and
-target function applied on \texttt{e}, as the following result shows.
-\begin{prop}[\texttt{Diff} is correct]
-\label{prop:diff-correct}
-Let \texttt{x} and \texttt{y} be heterogeneous lists and \texttt{e} an edit script, then
-\center{\texttt{Diff x y e ⇔ x ≡ ⟪ e ⟫ ∧ y ≡ ⟦ e ⟧}}
-\end{prop}
-
-	In our implementation the \texttt{diff} algorithm employed is a 
-        generalization of that proposed by Lempsink et al.\ \cite{Lemp09},
-        which will be discussed in Section \ref{sec:related-work}.
-        We remark that we have proved that it 
-	complies with the \texttt{Diff} specification:
-\begin{minted} {agda}
-diff-suff :  (x : HList xs) (y : HList ys) → Diff x y (diff x y)
-\end{minted}
+% We prove that \texttt{Diff x y e} complies with the specifications of
+% \texttt{diff} (Requirement \ref{req:diff-specs}), because \texttt{x}
+% and \texttt{y} are uniquely determined by respectively the source and
+% target function applied on \texttt{e}, as the following result shows.
+% \begin{prop}[\texttt{Diff} is correct]
+% \label{prop:diff-correct}
+% Let \texttt{x} and \texttt{y} be heterogeneous lists and \texttt{e} an edit script, then
+% \center{\texttt{Diff x y e ⇔ x ≡ ⟪ e ⟫ ∧ y ≡ ⟦ e ⟧}}
+% \end{prop}
+In our implementation we employ a generalization of Lempsink's
+\texttt{diff} algorithm \cite{Lemp09}, which meets
+Requirement \ref{req:diff-specs}.
+% \begin{minted} {agda}
+% diff-suff :  (x : HList xs) (y : HList ys) → Diff x y (diff x y)
+% \end{minted}
 
 \section{Generic diff$_3$}
 	The \texttt{diff3} algorithm takes as input three objects, the original
