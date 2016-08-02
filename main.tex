@@ -350,19 +350,28 @@ users expected:
 \subsection{Contributions}
 In this paper we make the following contributions:
 \begin{itemize}
-\item In Section \ref{subsec:edit-script}, we define a type-safe edit script data 
-      type that supports \emph{delete}, \emph{insert} and \emph{update} edits and 
-      that represents the differences between two objects. In Section 
-      \ref{subsec:diff-algo}, we give the formal specifications of a \texttt{diff} 
-      algorithm in terms of the edit script data type.
-\item In Section \ref{subsec:merge-semantics}, we formalize the 
-      \emph{three-way-merge} strategy and give a precise semantics of 
-      \emph{mergeable} and \emph{conflicting} edits. We give 
-      the formal specifications of a \texttt{diff3} algorithm in terms of our edit 
-      semantics. 
-\item In Section \ref{subsec:diff3-algo}, we show a data type generic, three-way 
-      \texttt{diff3} algorithm that satisfy our specifications and we study its 
-      formal properties in Section \ref{sec:properties}.
+%In Section \ref{subsec:edit-script}, 
+\item We define a type-safe edit script data 
+      type that represents the differences between two objects, using
+      \emph{delete}, \emph{insert} and \emph{update} edits.
+      %
+      We use the edit script data type to give formal specifications
+      of a \texttt{diff} algorithm, making our results independent 
+      from the specific algorithm used.
+      % algorithm in terms of the edit script data type.
+      % that  In Section 
+      \ref{subsec:diff-algo}, we give the 
+%In Section \ref{subsec:merge-semantics}, 
+    \item We formalize the \emph{three-way-merge} strategy and give a
+      precise semantics of \emph{mergeable} and \emph{conflicting}
+      edits. 
+% We give the formal specifications of a \texttt{diff3}
+%       algorithm in terms of our edit semantics.
+%In Section \ref{subsec:diff3-algo}, we
+    \item We implement a data type generic, three-way \texttt{diff3}
+      algorithm, based on our merge and conflict semantics and we
+      study its formal properties.
+% in Section \ref{sec:properties}.
 \end{itemize}
 We have implemented these algorithms using generic programming
 techniques in Agda \cite{Bove09}, a programming language with dependent
@@ -383,7 +392,19 @@ algorithms, their properties and formal proofs are available
 online\footnote{https://github.com/marco-vassena/gdiff3}.  For the
 sake of presentation, we have simplified the code presented in this
 paper, for instance by hiding implicit arguments and universe levels.
-\todo{This paper is organized as follows}
+%
+This paper is organized as follows.
+%
+Section \ref{section:universe} describes the universe used by our
+generic algorithms, Section \ref{sec:generic-diff} introduces the
+basic definitions of edits and type-safe edit scripts, Section
+\ref{sec:generic-diff3} introduces the semantics of merge and conflict
+and gives a \texttt{diff3} algorithm based on it. Section
+\ref{sec:properties} studies the formal properties of the algorithm
+and Section \ref{sec:haskell} revisits the motivating example using
+the contributions from the introduction.  Section
+\ref{sec:related-work} gives related work and Section
+\ref{sec:conclusion} concludes.
 
 \section{Universe}
 \label{section:universe}
@@ -440,7 +461,7 @@ tree.
 \end{minted}
 %
 This representation is type-safe because the constructor
-witness and the heterogeneous list share the same index
+\texttt{C} and the heterogeneous list share the same index
 \texttt{as}, therefore denoting a well-typed application of a
 constructor to its arguments.
 % 
@@ -479,15 +500,16 @@ We graphically depict objects encoded in this universe as trees:
 % \end{minted}
 	
 \section{Generic diff}
+\label{sec:generic-diff}
 Our \texttt{diff3} algorithm relies on a \texttt{diff} algorithm, used
 as a subroutine to compare the input objects and merge them.
 %
-The algorithm detect differences between two heterogeneous lists
+The algorithm detects differences between two heterogeneous lists
 given as input producing an edit script, whose edit operations
 progressively transform one into the other.
 %
-More precisely an edit script is a list of edits, that either insert,
-delete, or replace the nodes of the input objects.
+More precisely, an edit script is a list of edits, that either insert,
+delete, or replace nodes of the input objects.
 %
 We firstly describe a simply typed version of edit and edit scripts
 and then refine them to guarantee type-safety.
@@ -526,7 +548,7 @@ Edit \texttt{Upd α β} updates source node \texttt{α} with target node
 \texttt{β}.
 %
 It concretely represents a constructor change, because \texttt{α} and
-\texttt{β} have same target type \texttt{a}, but taking possibly
+\texttt{β} belong to the same type \texttt{a}, but take possibly
 different arguments \texttt{as} and \texttt{bs}.
 %
 Note that there is no explicit copy edit: it is just a special case of
@@ -543,7 +565,7 @@ efficient, because it might store the same node twice, it is more
 suitable for reasoning and leads to a more elegant merge and conflict
 semantics.
 %
-\todo{An implementation should take care of this. Do we?}
+% \todo{An implementation should take care of this. Do we?}
 	
 \subsection{Untyped Edit Script}
 \label{subsec:edit-script}
@@ -567,7 +589,7 @@ script.
 We work with lists of trees because certain edits, when applied to
 nodes in a tree, will intrinsically result in multiple trees.
 %
-For instance, deleting the root node to tree \texttt{ht}, from Section
+For instance, deleting the root node of tree \texttt{ht}, from Section
 \ref{section:universe}, will produce two trees (\texttt{Node
   \textcolor{magenta}{1} []} and \texttt{Node (\textcolor{blue}{::})
   [Node \textcolor{magenta}{2} [], Node \textcolor{blue}{[]} []]}):
@@ -596,12 +618,12 @@ instead.
 An update behaves as a simultaneous delete and insert and
 a no-operation leaves both of the stacks unchanged.
 %
-In principle, it should be possible to define functions that
-retrieves the source and target objects from a script, by
-\emph{inverting} the process that we have just described.
+In principle, it should be possible to define functions that retrieves
+the source and target objects from a script, by replaying the edit
+script and \emph{inverting} the process that we have just described.
 %
 Unfortunately, the lack of types already makes it hard to even assign a suitable
-type to a function \texttt{⟪\_⟫ : ES → HList ?} :
+type to such a function  \texttt{⟪\_⟫ : ES → HList ?},
 what type should we put instead of the question mark?
 %
 Crucially, an untyped edit script does not guarantee that its
@@ -629,10 +651,12 @@ dependently-typed programming, as we proceed to show in the next
 section.
 
 \subsection{Type-Safe Edit Script}
-In order to make edit script type-safe, we firstly refine the type of
-\emph{values}, to correctly approximate the trees popped and pushed on
-a stack, with their index and secondly annotate the edit script data
-type to ensure type-safety through them.
+In order to make edit scripts type-safe, we refine the \texttt{Value}
+data type to correctly track the type of the trees popped and pushed
+on a stack with its indexes.
+%
+Then, we make \texttt{ES} an indexed data type and take advantage of
+the the annotations on scripts and values to ensure type-safety.
 
 \paragraph{Value}
 Given a source (target) value of type \texttt{Value as a}, an edit
@@ -647,14 +671,14 @@ data Value : List Set → List Set → Set where
   ∅ : Value [] []
   ⟨_⟩ : C as a → Value as [ a ] 
 \end{minted}
-Observe that also the second index is a list and both of them are
-empty, for the empty value.
+Observe that also the second index is a list and that both of them are
+empty for the empty value.
 %
 
 \paragraph{Edit Script}
 The edit script data type is still a list of edits, but it is now
-indexed with type-level lists, which restrict the shape of the source
-and target stacks, ensuring type-safety.
+indexed with two lists of types, which restrict the shape of the
+source and target stacks.
 %
 \begin{minted}{agda}
 data ES : List Set → List Set → Set where
@@ -678,6 +702,7 @@ trees of types \texttt{bs} and \texttt{ds}.
 
 With more precise types, we can define \emph{source} function
 \texttt{⟪\_⟫}, which retrieves the source object from an edit script:
+
 \begin{minted}{agda}
 ⟪_⟫ : ES as bs → HList as
 ⟪ [] ⟫ = []
@@ -695,7 +720,7 @@ are trivial.
 Function \texttt{hsplit : HList (as ++ bs) → HList as × HList bs}
 splits an heterogeneous list in two parts according to its type and it
 is used to \emph{pop} the arguments (\texttt{hs₁}) of the source
-constructor (\texttt{α}) , from the rest of the list.
+constructor (\texttt{α}), from the rest of the list.
 %
 Note that the type of the cons constructor guarantees that the tree
 \texttt{Node α hs₁} is well-typed.
@@ -759,7 +784,7 @@ the edit script to be minimal, not even ``small''.
 Even though we expect our \texttt{diff3} algorithm to perform better
 with competitive \texttt{diff}s ---they will probably capture changes
 more precisely, the advantage of reasoning by such specification is
-that our results are valid for virtually any \emph{sensible}
+that our results are still valid with virtually any \emph{sensible}
 \texttt{diff} algorithm.
 %
 % The following data type serves to this purpose: \texttt{Diff x y e} is
@@ -791,6 +816,7 @@ Requirement \ref{req:diff-specs}.
 % \end{minted}
 
 \section{Generic diff$_3$}
+\label{sec:generic-diff3}
 The \texttt{diff3} algorithm takes as input three objects, the
 original version called \emph{base} and two new replicas, and it
 outputs an edit script that combines the changes between them.
@@ -807,17 +833,16 @@ Nevertheless, edits cannot always be automatically reconciled: a
 conflict is triggered in this situation and reported to the user, who
 has to solve it manually. 
 %
-\todo{More discussion about different design choices, persistent etc
-  ...}
-		
-\todo{Remark that the three-way technique is attractive and we simply
-  want to apply it to structured data. Maybe in intro?}
+% \todo{More discussion about different design choices, persistent etc
+%   ...}		
+% \todo{Remark that the three-way technique is attractive and we simply
+%   want to apply it to structured data. Maybe in intro?}
 %
-The merging technique employed in our \texttt{diff3} algorithm for
+The merging strategy employed in our \texttt{diff3} algorithm for
 algebraic data types consists in applying the three-way merge
-algorithm at the node level.
+technique at the node level.
 %
-Informally the algorithm compares corresponding parts of two objects
+Informally, the algorithm compares corresponding parts of two objects
 and of their base version, when two parts disagree, the base version
 is examined: a conflict is detected if each version is different,
 otherwise the version that changed from base is chosen.
@@ -953,10 +978,10 @@ source and two, possibly different, targets, which are treated as
 corresponding parts.  
 %
 Three-way merge fails and triggers a conflict, if the three values are
-all different: there is no general a priori strategy to merge such
-contrasting edits.
+all different, because, in general, there is no reason to choose one
+over the other.
 %
-If no more than two of them are different, it succeeds and finds an
+If no more than two of them are different, it succeeds and provides an
 edit that combines both.
 	
 \paragraph{Merge}
@@ -1005,7 +1030,7 @@ Conflicts \texttt{InsIns β γ} and \texttt{UpdUpd α β γ}, of type
 \texttt{Conflict ∅ ⟨ α ⟩ ⟨ β ⟩} and \texttt{Conflict ⟨ α ⟩ ⟨ β ⟩ ⟨ γ
   ⟩}, denote conflicting insertions and updates respectively.
 %
-They are similar to those detected by line-based \texttt{diff3}, which
+They resemble those detected by line-based \texttt{diff3}, which
 encodes proper updates as a deletion followed by an insertion.
 %
 Conflict \texttt{DelUpd α β} of type \texttt{Conflict ⟨ α ⟩ ∅ ⟨ β ⟩},
@@ -1036,15 +1061,15 @@ determined, i.e. for any concrete choice of \texttt{u}, \texttt{v} and
 determined.
 %
 As a result, also the semantics of conflict is minimal, because it
-contains only one axiom, yet complete because it can encode all true
+contains only one axiom, yet complete, because it can encode all true
 conflicts.
 
 \paragraph{Properties}
 We now show some fundamental properties of the semantics of merge and
-conflict, that are useful in our formalization.
+conflict, which are useful in our formalization.
         %
-Firstly, we prove that the semantics is sound, i.e.\ fixed two edits
-merge and conflict are \emph{mutually exclusive}.
+Firstly, we prove that the semantics is sound, i.e.\ merge and
+conflict are \emph{mutually exclusive}.
 \begin{prop}[Mutually Exclusive]
   \label{prop:mutually-exclusive}
   If \texttt{f ⊔ g ↧ h}, then there exists no conflict \texttt{c} such
@@ -1220,9 +1245,8 @@ diff₃ y x z with align (diff [ x ] [ y ]) (diff [ x ] [ z ])
         diffing the base version with the new versions, extending them
         with \texttt{Nop} operations.
         %
-        The call to this function is \emph{sound}, because dependent
-        types can capture that those edit scripts share the same
-        \emph{source} list \texttt{[ x ]}.
+        The call to this function is \emph{sound}, because those edit
+        scripts share the same \emph{source} list \texttt{[ x ]}.
         %
         Edit scripts \texttt{e₁*} and \texttt{e₂*} are aligned by
         Proposition \ref{prop:align-ext} and are merged by operator
@@ -1329,7 +1353,8 @@ producing an ill-typed script.
 \label{sec:properties}
 %
 The multitude of works in change detection and data reconciliation
-\cite{...} shows that a variety of different design choices are
+\cite{Pierce98, Ramsey01, UnisonSpec, PetersSurvey, Pierce07, Mens02,
+  Chawathe96} shows that a variety of different design choices are
 possible, when implementing diffing and merging algorithms, each
 leading to fundamental differences and tread-offs between precision,
 performance and reliability.
@@ -1355,8 +1380,8 @@ Furthermore, we consider only edit-related conflicts \texttt{c :
 \subsection{Conflict Conditions}
 The semantics of widespread merging algorithms, such as GNU
 \texttt{diff3} is not mathematically formalized, but it is rather
-approximately understood either empirically, and sometime largely
-misunderstood, due to incorrect intuitions \cite{PierceDiff3}.
+understood empirically, and sometime even largely misunderstood, due
+to incorrect intuitions \cite{PierceDiff3}.
 %
 As a result, users often struggle to predict the outcome of complex
 merge operations and end up facing unexpected conflicts.
