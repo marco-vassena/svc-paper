@@ -114,7 +114,7 @@
 \titlebanner{banner above paper title}        % These are ignored unless
 \preprintfooter{short description of paper}   % 'preprint' option specified.
 
-\title{Generic diff3 for Algebraic Datatypes}
+\title{Generic Diff3 for Algebraic Datatypes}
 %\subtitle{Subtitle Text, if any}
 
 \authorinfo{Marco Vassena}
@@ -153,7 +153,8 @@
   %
   Furthermore, we have identified the minimal conditions under which
   the merging algorithm raises a conflict and established a structural
-  invariant preserved.\todo{Improve conclusion?}
+  invariant preserved.
+  %\todo{Improve conclusion?}
   %
   % We have implemented our algorithm in Haskell in order to make our results
   % practical and employed advanced type-system features to retain a 
@@ -1770,8 +1771,8 @@ Haskell library that implements our algorithm.
 %
 Haskell can only partially simulate dependently typed programming,
 therefore the library cannot enforce certain invariants of the
-original model, such as \todo{In particular} \emph{aligment}, which are instead checked at
-run-time.
+original model, in particular \emph{aligmentent} of scripts, which are
+instead checked at run-time.
 %
 On the other hand, the Haskell implementation has much better
 performance, an essential requirement to make our algorithm practical.
@@ -1988,10 +1989,10 @@ Observe that using discrete distance, a single update edit is
 preferred to a delete and a subsequent insert.
 %
 \paragraph{Patch}
-Our library provides also a \texttt{patch} function, which corresponds
+Our library provides also a generic \texttt{patch} function, which corresponds
 to the target function \texttt{⟦\_⟧} of the model.
 \begin{minted}{haskell}
-patch :: ES xs ys → HList ys
+gpatch :: ES xs ys → HList ys
 \end{minted}
 
 We remark that contrary to that of Lempsink's \cite{Lemp09} the
@@ -2022,7 +2023,14 @@ so that \texttt{[ toHTree o ] :: HList '[ a ]} is a singleton list
 containing the \texttt{HTree a} representation of \texttt{o}.
 %
 Edit scripts \texttt{e₁} and \texttt{e₂} are merged by function
-\texttt{merge}, which implements the merge operator \texttt{⊔₃} and
+\texttt{merge}, which implements the merge operator \texttt{⊔₃}.
+%
+While in Agda we can exploit full-fledgeg dependent type to ensure
+that \texttt{⊔₃} takes only \emph{aligned} edit scripts,
+\texttt{merge} is less finely typed and must therefore
+\emph{dynamically} check alignment of each pair of edits.
+%
+ and
 produces a merged edit script that is lastly typechecked by function
 \texttt{typecheck}.
 %
@@ -2047,7 +2055,7 @@ c = [[1,2,3],
 Merging them using \texttt{gdiff3} succeeds and gives the expected table:
 \begin{verbatim}
 Main> let Right e = gdiff3 b a c
-Main> patch e
+Main> gpatch e
 [[0,1,2,3], [0,4,5,9], [0,7,8,15]]
 \end{verbatim}
 
