@@ -1778,46 +1778,59 @@ performance, an essential requirement to make our algorithm practical.
 %
 
 \subsection{Data  Representation}
-In our model we used the abstract representation \texttt{C as a}
-for a constructor of the algebraic data type \texttt{a} which takes
-arguments \texttt{as}.
+In our model, the abstract type \texttt{C as a} encodes a constructor
+of algebraic data type \texttt{a}, that takes arguments \texttt{as}.
 %
-In the library this construct is encoded as a Generalized Algebraic
-Data Type (GADT), indexed by a list of types and a target type.
+In the library\todo{Here link}, we implement this representation using
+a Generalized Algebraic Data Type (GADT), indexed by a list of types
+and a target type\footnote{Lists are automatically lifted to the type
+  level and share the same term-syntax. A tick distinguishes lifted
+  lists of kind \texttt{[ * ]}, e.g. \texttt{'[]}, from the type of
+  homogeneous lists of kind \texttt{*}, e.g. \texttt{[]}.}.
 %
-Each constructor of the algebraic data type is represented separately
-by one of its constructor, which instantiates the first index with
-the type of its arguments and the second with the resulting type.
+Each data type constructor is represented by a different constructor,
+which instantiates the first index with the type of its arguments and
+the second with the resulting type.
 %
 \paragraph{Example}
-We encode the list constructors in \texttt{ListC}:
+For example, data type \texttt{ListC} encodes the list constructors:
 \begin{minted}{haskell}
 data ListC (as :: [ * ]) (a :: *) where
   Nil :: ListC '[] [a]
   Cons :: ListC '[a , [a]] [a]
 \end{minted}
-\todo{Explain the constructors!!!}
-In Haskell, lists are automatically lifted to the type level and they
-both share the same syntax, hence we put a tick to distinguish lifted
-lists of kind \texttt{[ * ]} from the type of homogeneous lists of kind \texttt{*}.
+Constructor \texttt{Nil} represents the empty list constructor ---it
+takes no argument (\texttt{'[]}) and produce type \texttt{[a]}.
+%m
+Constructor \texttt{Cons} represents the cons constructor, which
+takes two arguments, the head of the list and the tail of the list
+\texttt{'[a , [a]]} and produces a list of type \texttt{[a]}.
 %
-Primitive types such as integer are also encoded in a similar data
-type, but since they may assume many values, they are all combined in
-a single constructor that takes the original value.
+Observe that, \texttt{Nil} and \texttt{Cons} represent \emph{polymorphic}
+constructors.
+%
+
+%
+This representation encodes also primitive types, i.e.\ non algebraic
+data types, such as integer.
+%
+Since they may assume many values, they are all combined in a single
+constructor, whose index declares that it does not take any argument
+(\texttt{'[]}), while, in reality, it stores the actual value.
 \begin{minted}{haskell}
 data IntC xs a where
   I :: Int → IntC '[] Int
 \end{minted}
-
-These two encoding are sufficient for our example, in
-which we encode tables as lists of lists of integers.
+Thanks to polymorphism, these two encoding are sufficient for our to
+revisit our initial example: we represent a CSV table as lists of
+lists of integers.
 \begin{minted}{haskell}
 type Csv = [[Int]]
 \end{minted} 
 
 \subsection{Diffing}
-Since \texttt{diff3} relies on \texttt{diff}, our library
-defines a type class for types that can be diffed.
+Since \texttt{diff3} relies on \texttt{diff}, our library defines type
+class \texttt{Diff a}, for types \texttt{a} that support diffing.
 
 \begin{minted}{haskell}
 class Typeable a => Diff a where
@@ -1835,11 +1848,11 @@ and for consistency:
 \begin{minted}{haskell}
 type C xs a = (Encoding a) xs a
 \end{minted}
-\todo{You can also do it with another type class parameter and functional 
-dependencies but it is worse in end.}
+% \todo{You can also do it with another type class parameter and functional 
+% dependencies but it is worse in end.}
 %
-Methods \texttt{toHTree} and \texttt{fromHTree} are inverse functions
-that embed a value into and from the generic representation.
+Methods \texttt{toHTree} and \texttt{fromHTree} are \emph{inverse}
+functions that embed a value into and from the generic representation.
 % 
 % The universe used in the implementation corresponds precisely to that
 % of the model, except that it requires a \texttt{Diff} instance for
@@ -1859,8 +1872,8 @@ that embed a value into and from the generic representation.
 %
 Method \texttt{(=?=)} tests equality between constructors of the same
 data type, and if so it returns a proof that their field types are
-equal. This operator is used by the merge algorithm to dynamically
-check \emph{alignment} and to determine whether an update is just a copy.
+equal. This operator is used both in the diff and merge algorithm both
+to merge edits.
 %
 % The function \texttt{distance} computes the cost of an update between
 % constructors of the same type and it is expected to be a
@@ -1878,25 +1891,29 @@ check \emph{alignment} and to determine whether an update is just a copy.
 % 	\end{align*}	
 % \end{definition}
 
-A reasonable distance function for algebraic
-data type constructors is the \emph{discrete distance}:
+For instance, in \texttt{diff} it is used to compute the
+\emph{discrete distance}, and find a minimal length edit script:
 	\[ d(x, y) = 
 		\begin{cases} 
 			0 \quad &\mbox{if } x = y \\
 			1 \quad &\mbox {otherwise}		
 		\end{cases} \]	
 %
-Lastly the superclass \texttt{Typeable} provides methods to inspect and
-compare types at run-time.
-The \texttt{diff} and \texttt{diff3} algorithms use its methods respectively 
-to check whether two constructors are of the same data type
-and to type-check a merged edit script.
+Lastly, superclass \texttt{Typeable} provides methods to inspect
+and compare types at run-time.
+%
+In \texttt{diff} and \texttt{diff3} algorithms, these methods are
+needed to check whether two constructors are of the same data type and
+to type-check a merged edit script respectively.
 
 \paragraph{Example}
-Diffing tables requires only a \texttt{Diff} instance for integers
-and one for lists.
+Diffing tables requires only two \texttt{Diff} instances, one for
+integers and one for lists.
+%
 In fact given the \texttt{Diff} instance for the content type, we can
-derive a \texttt{Diff} instance for lists of them.
+derive a \texttt{Diff} instance for lists of them, so that
+\texttt{Diff [Int]} is derived from \texttt{Diff Int}, and
+\texttt{Diff [[Int]]} from the previous one.
 
 \begin{minted}{haskell}
 instance Diff a => Diff [a] where	
@@ -1913,13 +1930,11 @@ instance Diff a => Diff [a] where
   fromHTree (Node Nil HNil) = []
   fromHTree (Node Cons (HCons t (HCons ts HNil))) 
     = fromHTree x : fromHTree ts
-
-  distance Nil Nil = 0
-  distance Cons Cons = 0
-  distance _ _ = 1
 \end{minted} 
 %
-The \texttt{Diff Int} is straightforward:
+Note that when comparing primitive type ``constructors'',
+we have to compare the actual value, to establish 
+that they represent the ``same'' constructor.
 \begin{minted}{haskell}
 instance Diff Int where
   type Encoding Int = IntF
@@ -1929,20 +1944,16 @@ instance Diff Int where
   toHTree x = Node (I x) HNil
   
   fromHTree (Node (I x) HNil) = x
-
-  distance (I x) (I y) = if x == y then 0 else 1
 \end{minted}
-When applied to primitive types, method \texttt{=?=} needs to check that the
-actual values are in fact equal.
 %
-Tables are just lists of list of integers, so that the same list
-\texttt{Diff} instance is used twice, once to derive \texttt{Diff
-  [Int]} from \texttt{Diff Int} and then to automatically derive
-\texttt{Diff [[Int]]} from it.
+% Tables are just lists of list of integers, so that the same list
+% \texttt{Diff} instance is used twice, once to derive \texttt{Diff
+%   [Int]} from \texttt{Diff Int} and then to automatically derive
+% \texttt{Diff [[Int]]} from it.
 %
-In both the instances we used \emph{discrete distance}, however
-depending on the specific domain more fine grained distance measure
-could be used to get more precise diffs.
+% In both the instances we used \emph{discrete distance}, however
+% depending on the specific domain more fine grained distance measure
+% could be used to get more precise diffs.
 
 \paragraph{Algorithm}
 A  \texttt{diff} algorithm takes as input two objects and outputs an
@@ -1961,24 +1972,32 @@ gdiff :: (Diff a, Diff b) => a → b → ES '[ a ] '[ b ]
 Our \texttt{diff} algorithm is mostly an extension of that of
 Lempsink's et al.\ therefore we omit it.
 %
-We only remark that we have adjusted the definition of edit script length,
-in order to take into account update edits, whose cost is given
-by the \texttt{distance} function.
+We only remark that we have adjusted the edit script length function,
+in order to take into account update edits, whose cost is given by the
+\emph{discrete distance} function, when computing its score.
 %
-When using \emph{discrete distance}, a single update edit is preferred
-to a delete and a subsequent insert.
+% \begin{minted}{haskell}
+% cost :: ES xs ys -> Int
+% cost End = 0
+% cost (Ins x e) = 1 + cost e
+% cost (Del x e) = 1 + cost e
+% cost (Upd x y e) = if x =?
+% \end{minted}
+%
+Observe that using discrete distance, a single update edit is
+preferred to a delete and a subsequent insert.
 %
 \paragraph{Patch}
-Our library provides also a \texttt{patch} function, which corresponds to
-the target function \texttt{⟦\_⟧} of the model.
+Our library provides also a \texttt{patch} function, which corresponds
+to the target function \texttt{⟦\_⟧} of the model.
 \begin{minted}{haskell}
 patch :: ES xs ys → HList ys
 \end{minted}
 
-We remark that contrary to that of Lempsink's \cite{Lemp09} the function
-is total and furthermore does not need the source object to compute the
-target object, since the edit script alone contains all the information
-necessary to reconstruct it.
+We remark that contrary to that of Lempsink's \cite{Lemp09} the
+function is total and furthermore does not need the source object to
+compute the target object, since the edit script alone contains all
+the information necessary to reconstruct it.
 
 \subsection{Merging}
 Merging consists in diffing the base version with respect to each new
@@ -1992,19 +2011,19 @@ Our library merges objects in this way by means of function \texttt{gdiff3}:
 \begin{minted}{haskell}
 gdiff3 :: Diff a => a → a → a → Either [Conflict] (ES '[ a ] '[ a ])
 gdiff3 x o y = typecheck $ merge e1 e2
-  where e1 = diff [ toHTree o ] [ toHTree x ]
-         e2 = diff [ toHTree o ] [ toHTree y ]
+  where e1 = gdiff [ toHTree o ] [ toHTree x ]
+         e2 = gdiff [ toHTree o ] [ toHTree y ]
 \end{minted}
-The input objects are transformed in our generic encoding by \texttt{toHTree}
-and diffed with respect to the original version.
+The input objects are transformed into our generic encoding by
+\texttt{toHTree} and diffed with respect to the original version.
 %
-For the sake of brevity we are lifting list syntax to heterogeneous lists,
+For the sake of brevity, we lift list syntax to heterogeneous lists,
 so that \texttt{[ toHTree o ] :: HList '[ a ]} is a singleton list
 containing the \texttt{HTree a} representation of \texttt{o}.
 %
 Edit scripts \texttt{e₁} and \texttt{e₂} are merged by function
-\texttt{merge}, that implements the merge operator \texttt{⊔₃},
-producing a merged edit script that is lastly typechecked by function
+\texttt{merge}, which implements the merge operator \texttt{⊔₃} and
+produces a merged edit script that is lastly typechecked by function
 \texttt{typecheck}.
 %
 
@@ -2025,7 +2044,6 @@ c = [[1,2,3],
       [4,5,9],
       [7,8,15]]
 \end{minted}
-
 Merging them using \texttt{gdiff3} succeeds and gives the expected table:
 \begin{verbatim}
 Main> let Right e = gdiff3 b a c
@@ -2101,9 +2119,10 @@ Alignment of corresponding parts plays a central role when merging
 two objects. 
 %
 In this work the alignment is \emph{global} and mainly determined by
-\texttt{diff} \todo{Discuss alignment and diff in the Haskell
-  section?} which computes the embedding of the source into the target
-object, by minimizing an appropriate cost model.
+\texttt{diff},
+% \todo{Discuss alignment and diff in the Haskell section?}
+which computes the embedding of the source into the target object, by
+minimizing an appropriate cost model.
 %
 GNU \texttt{diff3} aligns lines of texts dividing them in stable and
 unstable \emph{chunks} based on the longest common subsequences
