@@ -500,26 +500,26 @@ respectively.
 A value is an optional node, i.e.  \texttt{Value as a = Maybe (C as
   a)}. 
 %
-For brevity, we write \texttt{⊥} for an empty value and \texttt{⟨ α ⟩}
+For brevity, we write \texttt{∅} for an empty value and \texttt{⟨ α ⟩}
 for a value containing node \texttt{α}.
 % 
 All the possible combinations of source and target value state, i.e.\
 empty and non-empty, form four different edit operations.
 \begin{minted}{agda}
 data _⟼_ : Value as a → Value bs a → Set where
-  Nop : ⊥ ⟼ ⊥
-  Del : (α : C as a) → ⟨ α ⟩ ⟼ ⊥
-  Ins : (α : C as a) → ⊥ ⟼ ⟨ α ⟩
+  Nop : ∅ ⟼ ∅
+  Del : (α : C as a) → ⟨ α ⟩ ⟼ ∅
+  Ins : (α : C as a) → ∅ ⟼ ⟨ α ⟩
   Upd : (α : C as a) (β : C bs a) → ⟨ α ⟩ ⟼ ⟨ β ⟩
 \end{minted}
 The \texttt{Nop} edit is a no-operation, that will be
 used in Section \ref{subsec:alignment}, to \emph{align} edit scripts.
 %
 Edit \texttt{Del α} deletes node \texttt{α}, which is mapped to
-the empty value \texttt{⊥}, since it lacks a target node.
+the empty value \texttt{∅}, since it lacks a target node.
 %
 Similarly, edit \texttt{Ins α} inserts node \texttt{α}, which
-then lacks a source node, hence it has the empty value \texttt{⊥} 
+then lacks a source node, hence it has the empty value \texttt{∅} 
 as source value.
 %
 Edit \texttt{Upd α β} updates source node \texttt{α} with target node
@@ -640,7 +640,7 @@ The following indexed data type correctly approximate inputs and
 outputs, regardless of the presence of the node.
 \begin{minted}{agda}
 data Value : List Set → List Set → Set where
-  ⊥ : Value [] []
+  ∅ : Value [] []
   ⟨_⟩ : C as a → Value as [ a ] 
 \end{minted}
 Observe that also the second index is a list and both of them are
@@ -878,8 +878,8 @@ e₂ = [Cpy (::), Cpy 1, Ins  (::), Ins  2, Cpy []]
 % e₂ = [                Cpy (::), Cpy 1, Ins (::), Ins 2, Cpy []] 
 % \end{minted}       
 Scripts \texttt{e₁} and \texttt{e₂} are \emph{not} aligned, because
-their first edits are not, namely \texttt{⊥ ≢ ⟨ :: ⟩}, where
-\texttt{⊥} is the source value of \texttt{Ins (::)} in \texttt{e₁} and
+their first edits are not, namely \texttt{∅ ≢ ⟨ :: ⟩}, where
+\texttt{∅} is the source value of \texttt{Ins (::)} in \texttt{e₁} and
 \texttt{⟨ :: ⟩} is the source value of \texttt{Cpy (::)} in
 \texttt{e₂}.
 
@@ -917,7 +917,7 @@ As a result, we can systematically apply this technique in
 \end{prop}
 Adding no-operations operations to align scripts is effective, because
 \texttt{Nop} always aligns with \texttt{Ins} --- they both have the
-empty value \texttt{⊥} as source.
+empty value \texttt{∅} as source.
 %
 Furthermore, it is also innocuous, because no-operations cannot
 introduce new conflicts, since they are \emph{identity} edits.
@@ -997,13 +997,13 @@ We omit the full declaration for brevity, but we briefly describe its
 constructors.
 %
 Conflicts \texttt{InsIns β γ} and \texttt{UpdUpd α β γ}, of type
-\texttt{Conflict ⊥ ⟨ α ⟩ ⟨ β ⟩} and \texttt{Conflict ⟨ α ⟩ ⟨ β ⟩ ⟨ γ
+\texttt{Conflict ∅ ⟨ α ⟩ ⟨ β ⟩} and \texttt{Conflict ⟨ α ⟩ ⟨ β ⟩ ⟨ γ
   ⟩}, denote conflicting insertions and updates respectively.
 %
 They are similar to those detected by line-based \texttt{diff3}, which
 encodes proper updates as a deletion followed by an insertion.
 %
-Conflict \texttt{DelUpd α β} of type \texttt{Conflict ⟨ α ⟩ ⊥ ⟨ β ⟩},
+Conflict \texttt{DelUpd α β} of type \texttt{Conflict ⟨ α ⟩ ∅ ⟨ β ⟩},
 is a new form of conflict, that stems from the fact that these two
 edits are in general irreconcilable ---conflict \texttt{UpdDel α β} is analogous.
 %
@@ -1515,7 +1515,7 @@ by merging aligned edits from the input scripts.
 
 \subsection{Persistence}
 Persistence is a property that establishes how conflicting edits,
-e.g.\ \texttt{⊥ ⟼ ⟨ \textcolor{magenta}{1} ⟩} and \texttt{⊥ ⟼ ⟨
+e.g.\ \texttt{∅ ⟼ ⟨ \textcolor{magenta}{1} ⟩} and \texttt{∅ ⟼ ⟨
   \textcolor{magenta}{2} ⟩}, should be handled during merging.
 %
 Persistence promises to \emph{never} back out user's changes, hence it
@@ -1715,7 +1715,7 @@ Then one of the following holds.
 \item Node \texttt{α} is mapped to some node \texttt{γ}, node
   \texttt{β} is mapped to some node \texttt{φ}, such that
   \texttt{γ} comes before node \texttt{φ} in \texttt{y}.
-  % \texttt{e ⊢ ⟨ α ⟩ ⟼ ⊥} or \texttt{e ⊢ ⟨ β ⟩ ⟼ ⊥} or there exists
+  % \texttt{e ⊢ ⟨ α ⟩ ⟼ ∅} or \texttt{e ⊢ ⟨ β ⟩ ⟼ ∅} or there exists
   % nodes \texttt{γ} and \texttt{φ} such that \texttt{e ⊢ ⟨ α ⟩ ⟼ ⟨ γ
   %   ⟩}, \texttt{e ⊢ ⟨ β ⟩ ⟼ ⟨ φ ⟩} and \texttt{y ⊢ γ ⊏ φ}.
 \end{itemize}
@@ -1725,7 +1725,7 @@ Then one of the following holds.
 %   \texttt{f : ⟨ α ⟩ ⟼ u} and \texttt{g : ⟨ β ⟩ ⟼ v}, such that
 %   \texttt{e ⊢ f ⊏ g}.
 %   %
-%   By case analysis either \texttt{u = ⊥} or \texttt{v = ⊥} or \texttt{u = ⟨ γ ⟩}
+%   By case analysis either \texttt{u = ∅} or \texttt{v = ∅} or \texttt{u = ⟨ γ ⟩}
 %   and \texttt{v = ⟨ Φ ⟩}. In the first (second) case \texttt{α} (\texttt{β}) is deleted and we are done.
 %   In the third case they are both updated, i.e.\ \texttt{e ⊢ ⟨ α ⟩ ⟼ ⟨ γ ⟩} and
 %   \texttt{e ⊢ ⟨ β ⟩ ⟼ ⟨ φ ⟩}.
