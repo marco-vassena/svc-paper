@@ -38,7 +38,7 @@
 \usepackage[dvipsnames]{xcolor}  		% Color package
 \definecolor{dgreen}{rgb}{0.,0.6,0.}    % Deep green
 \usepackage{caption}
-\usepackage[colorinlistoftodos,prependcaption,textsize=tiny]{todonotes}	% todos
+\usepackage[colorinlistoftodos,prependcaption,textsize=tiny,disable]{todonotes}	% todos
 
 % Figures with border
 \usepackage{float}
@@ -1380,7 +1380,7 @@ Furthermore, we consider only edit-related conflicts \texttt{c :
 \subsection{Conflict Conditions}
 The semantics of widespread merging algorithms, such as GNU
 \texttt{diff3} is not mathematically formalized, but it is rather
-understood empirically, and sometime even largely misunderstood, due
+understood empirically, and sometimes even largely misunderstood, due
 to incorrect intuitions \cite{PierceDiff3}.
 %
 As a result, users often struggle to predict the outcome of complex
@@ -1523,14 +1523,13 @@ Let \texttt{α} be a node and \texttt{e = diff x y}:
 Unfortunately, the properties proved in Proposition \ref{prop:sanity}
 are not enough to characterize a useful merge algorithm.
 %
-Crucially, \emph{Edit Origin} asserts that if an edit is presented in
+Crucially, \emph{edit origin} asserts that, if an edit is presented in
 the merged script, then it is part of either the input scripts, but it
-does not guarantee that \texttt{f} will actually end up in the merged
-script.
+does not guarantee that any edit from the input scripts will actually
+end up in the merged script.
 %
-A merge operator that merely returns an empty script (\texttt{e₁ ⊔₃ e₂
-  = []}) would satisfy this property, but clearly it does not do
-anything useful at all.
+A merge operator that merely returns an empty script (i.e.\ \texttt{e₁ ⊔₃ e₂
+  = []}) would satisfy this property, but clearly it not very useful.
 %
 Proposition \ref{prop:maximality} proves \emph{maximality}, which
 forces the merge operator to yield every edit that can be obtained
@@ -1553,8 +1552,9 @@ gives up \emph{convergence}, i.e.\ the guarantee to produce a merged
 object, and raises a conflict when it is not possible to soundly merge
 edits \cite{Pierce07}.
 %
-Inspired by GNU \texttt{diff3}, we have opted for \emph{persistence}:
-Theorem \ref{thm:persistence} proves that \texttt{⊔₃} is persistent.
+Inspired by GNU \texttt{diff3}, we have opted for \emph{persistence}
+over convergence: Theorem \ref{thm:persistence} proves that
+\texttt{⊔₃} is persistent.
 
 % We now formally state and prove that our merge algorithm is
 % \emph{persistent}.  This property is very important because conflicts
@@ -1737,14 +1737,13 @@ depth-first order of the source (target) objects:
     % the other is symmetrical.
 \begin{thm}[\texttt{diff} is OP]
 Let \texttt{e = diff x y} and nodes \texttt{α} and \texttt{β},
-such that \texttt{α} precedes \texttt{β} in \texttt{x} (\texttt{y}).
+such that \texttt{α} precedes \texttt{β} in \texttt{x}.
 Then one of the following holds.
 \begin{itemize}
-\item Node \texttt{α} is deleted in \texttt{e}.
-\item Node \texttt{β} is deleted in \texttt{e}.
-\item Node \texttt{α} is mapped to some node \texttt{γ}, node
-  \texttt{β} is mapped to some node \texttt{φ}, such that
-  \texttt{γ} comes before node \texttt{φ} in \texttt{y}.
+\item \texttt{⟨ α ⟩ ⟼ ∅} in \texttt{e}. %(\texttt{α} is deleted).
+\item \texttt{⟨ β ⟩ ⟼ ∅} in \texttt{e}. %(\texttt{β} is deleted).
+\item \texttt{∃ γ φ . ⟨ α ⟩ ⟼ ⟨ γ ⟩}, \texttt{⟨ β ⟩ ⟼ ⟨ φ ⟩} in
+  \texttt{e} and \texttt{γ} precedes \texttt{φ} in \texttt{y}.
   % \texttt{e ⊢ ⟨ α ⟩ ⟼ ∅} or \texttt{e ⊢ ⟨ β ⟩ ⟼ ∅} or there exists
   % nodes \texttt{γ} and \texttt{φ} such that \texttt{e ⊢ ⟨ α ⟩ ⟼ ⟨ γ
   %   ⟩}, \texttt{e ⊢ ⟨ β ⟩ ⟼ ⟨ φ ⟩} and \texttt{y ⊢ γ ⊏ φ}.
@@ -1812,7 +1811,7 @@ performance, an essential requirement to make our algorithm practical.
 In our model, the abstract type \texttt{C as a} encodes a constructor
 of algebraic data type \texttt{a}, that takes arguments \texttt{as}.
 %
-In the library\todo{Here link}, we implement this representation using
+In the library, we implement this representation using
 a Generalized Algebraic Data Type (GADT), indexed by a list of types
 and a target type\footnote{Lists are automatically lifted to the type
   level and share the same term-syntax. A tick distinguishes lifted
@@ -1905,7 +1904,7 @@ functions that embed a value into and from the generic representation.
 Method \texttt{(=?=)} tests equality between constructors of the same
 data type, and returns a proof that their field types are equal, if
 this is the case. This operator is used both in the diff and merge
-algorithm both to merge edits.
+algorithms.
 %
 % The function \texttt{distance} computes the cost of an update between
 % constructors of the same type and it is expected to be a
@@ -1948,7 +1947,7 @@ derive a \texttt{Diff} instance for lists of them, so that
 \texttt{Diff [[Int]]} from the previous one.
 
 \begin{minted}{haskell}
-instance Diff a => Diff [a]x where	
+instance Diff a => Diff [a] where	
   type Encoding [a] = ListC
 
   Nil =?= Nil = Just Refl
@@ -1964,9 +1963,9 @@ instance Diff a => Diff [a]x where
     = fromHTree x : fromHTree ts
 \end{minted} 
 %
-Note that when comparing primitive type ``constructors'',
-we have to compare the actual value, to establish 
-that they represent the ``same'' constructor.
+Note that when comparing primitive type ``constructors'', we have to
+compare the actual value, to establish whether they represent in fact
+the same one.
 \begin{minted}{haskell}
 instance Diff Int where
   type Encoding Int = IntC
@@ -2061,10 +2060,6 @@ that \texttt{⊔₃} takes only \emph{aligned} edit scripts,
 \texttt{merge} is less finely typed and must therefore
 \emph{dynamically} check alignment of each pair of edits.
 %
- and
-produces a merged edit script that is lastly typechecked by function
-\texttt{typecheck}.
-%
 
 \paragraph{Example}
 Variables \texttt{a}, \texttt{b} and \texttt{c} represent the tables
@@ -2121,9 +2116,9 @@ Our \emph{edit script} is inspired by Lempsink's \cite{Lemp09}, but
 employs a more general notion of \emph{edit}, a mapping between
 values, which enables reasoning about merge and conflict.
 %
-While Lempsink's \texttt{diff} algorithm finds a \emph{minimal length}
-edit script, ours uses a \emph{cost} measure, which is parametric in
-the \texttt{distance} function used to weight updates.  
+% While Lempsink's \texttt{diff} algorithm finds a \emph{minimal length}
+% edit script, ours uses a \emph{cost} measure, which is parametric in
+% the \texttt{distance} function used to weight updates.  
 %
 We both employ similar trees and heterogeneous list, but our
 constructor representation handles also \emph{polymorphic}
@@ -2315,12 +2310,12 @@ precisely, leading to more specific edit scripts and ultimately
 reducing the number of spurious conflicts raised in merges and
 improving the quality of automatic reconciliation.
 %
-We have formalized the semantics of merge and conflict in Agda and
-use it to prove several properties about our algorithm allowing
-users to reason about complex merge operations.
+We have formalized the semantics of merge and conflict in Agda and use
+it to prove several properties about our algorithm, allowing users to
+reason about complex merge operations.
 %
-We have released an efficient version of our algorithm as an Haskell
-library.
+% We have implemented an efficient version of our algorithm as an Haskell
+% library.
 %
 We plan to perform a rigorous evaluation of our algorithm on real
 world data as future work.
@@ -2352,7 +2347,7 @@ world data as future work.
 
 % \end{thebibliography}
 
-\listoftodos
+%\listoftodos
 
 \end{document}
 
@@ -2362,7 +2357,6 @@ world data as future work.
 %  ----         ------  ----    ------
 
 %  2013.06.29   TU      0.1--4  comments on permission/copyright notices
-]
 
 %%% Local Variables: 
 %%% coding: utf-8
