@@ -292,8 +292,8 @@ The two users would like to synchronize their work now and decide to
 use \texttt{diff3} to merge their versions.
 %
 They have modified \emph{independent} parts of the table, therefore
-they are confident that it is should be possible to automatically
-merge the changes, without incurring in a conflict.
+they are confident that it should be possible to automatically
+merge the changes, without incurring a conflict.
 %
 Unfortunately, since \texttt{diff3} is a line-based algorithm, it
 compares files line by line, without considering the actual structure
@@ -523,7 +523,11 @@ then lacks a source node, hence it has the empty value \texttt{∅}
 as source value.
 %
 Edit \texttt{Upd α β} updates source node \texttt{α} with target node
-\texttt{β} and concretely represents a constructor change.
+\texttt{β}.
+%
+It concretely represents a constructor change, because \texttt{α} and
+\texttt{β} have same target type \texttt{a}, but taking possibly
+different arguments \texttt{as} and \texttt{bs}.
 %
 Note that there is no explicit copy edit: it is just a special case of
 update, in which the source and target nodes happen to be the same.
@@ -620,7 +624,7 @@ ill-typed tree, whose root node lacks a second child:
 \end{figure}
 
 %
-Guaranteeing such invariants is the bread and butter of
+Guaranteeing this kind of invariant is the bread and butter of
 dependently-typed programming, as we proceed to show in the next
 section.
 
@@ -877,7 +881,7 @@ e₂ = [Cpy (::), Cpy 1, Ins  (::), Ins  2, Cpy []]
 % e₁ = [Ins (::), Ins 1, Cpy (::), Cpy 1,                 Cpy []]
 % e₂ = [                Cpy (::), Cpy 1, Ins (::), Ins 2, Cpy []] 
 % \end{minted}       
-Scripts \texttt{e₁} and \texttt{e₂} are \emph{not} aligned, because
+The edit scripts \texttt{e₁} and \texttt{e₂} are \emph{not} aligned, because
 their first edits are not, namely \texttt{∅ ≢ ⟨ :: ⟩}, where
 \texttt{∅} is the source value of \texttt{Ins (::)} in \texttt{e₁} and
 \texttt{⟨ :: ⟩} is the source value of \texttt{Cpy (::)} in
@@ -894,7 +898,7 @@ In the following, we use notation \texttt{e ⊑ e*} to denote that edit
 script \texttt{e*} extends script \texttt{e} with a finite number of
 \texttt{Nop} edits.
 %
-Observe that, \texttt{Nop} edits change neither the \emph{source} nor the
+Observe that, \texttt{Nop} edits changes neither the \emph{source} nor the
 \emph{target} of the edit script, therefore it is an harmless
 extension.
 \begin{prop}[Equivalent Extension]
@@ -970,7 +974,8 @@ that this judgment is defined only on aligned edits and that also the
 resulting edit must share the same source value.
 %
 Each constructor represents a distinct axiom that justifies why the
-merge is possible and determines the merged target value.
+merge is possible and determines the merged target value, i.e.
+instantiates \texttt{c} with either \texttt{a} or \texttt{b}.
 %
 Rules \texttt{Id₁} and \texttt{Id₂} apply when respectively the
 first and the second transformation is an \emph{identity} edit.
@@ -1061,7 +1066,7 @@ a function to merge edits.
 
 \paragraph{Merge Operator}
 For every pair of aligned edits \texttt{f} and \texttt{g}, binary
-operator \texttt{⊔} either finds a suitable edit \texttt{h} and
+operator \texttt{⊔} either provides a suitable edit \texttt{h} and
 provide a proof that \texttt{f ⊔ g ↧ h}, or detects a conflict
 \texttt{c}, with a proof that \texttt{f ⊔ g ↥ c}.
         
@@ -1273,7 +1278,7 @@ can be read off them.
           {\texttt{[] ⇓ []}}
           \and
           \inferrule
-          {\texttt{f : v \textasciitilde> w} \\ 
+          {\texttt{f : v ⟼ w} \\ 
            \texttt{w : C cs ds} \\
            \texttt{e ⇓ cs ++ ys}}
           {\texttt{f ∷ e ⇓ (ds ++ ys)}}
@@ -1344,7 +1349,7 @@ denote that edit \texttt{f} and conflict \texttt{c} occurs in script
 \texttt{e} respectively and \texttt{α ∈ hs} if node \texttt{α}
 occurs in list \texttt{hs}.
 %
-Furthermore we consider only edit-related conflicts \texttt{c :
+Furthermore, we consider only edit-related conflicts \texttt{c :
   Conflict u v w}.
   
 \subsection{Conflict Conditions}
@@ -1632,8 +1637,8 @@ to their position in the script.
 % \end{minted}
 
 % Intuitively the list is used as a stack, so that after visiting each
-% node its children, yet to be traversed, are pushed on the stuck.  Note
-% that those trees will be visited before those already on the stuck,
+% node its children, yet to be traversed, are pushed on the stack.  Note
+% that those trees will be visited before those already on the stack,
 % hence following correctly the depth-first traversal.
 
 % \begin{definition}[Edit Order]
@@ -1742,10 +1747,10 @@ Then one of the following holds.
 % %
 % Note that the property is restricted only to successful merges and
 % furthermore only to \emph{non-identity} edits, since they could 
-% ne be excluded in favor of proper changing edits otherwise.
+% not be excluded in favor of proper changing edits otherwise.
 % %
 % The property holds intuitively because the merge algorithm does not
-% rearrange the input edits, but rather merge them pointwise, retaining
+% rearrange the input edits, but rather merges them pointwise, retaining
 % the original order in the merged script.
 % %
 % \todo{Better! Give me a take home message!}
@@ -1766,11 +1771,11 @@ In this section, we revisit the motivating example from Section
 \ref{sec:intro} using our fine-grained merge algorithm and show that
 it performs better than line-based \texttt{diff3}.
 %
-Furthermore while presenting this example we show the API of the
+Furthermore, while presenting this example we show the API of the
 Haskell library that implements our algorithm.
 %
 Haskell can only partially simulate dependently typed programming,
-therefore the library cannot enforce certain invariants of the
+therefore the library cannot enforce certain invariant of the
 original model, in particular \emph{aligmentent} of scripts, which are
 instead checked at run-time.
 %
@@ -1801,11 +1806,12 @@ data ListC (as :: [ * ]) (a :: *) where
   Cons :: ListC '[a , [a]] [a]
 \end{minted}
 Constructor \texttt{Nil} represents the empty list constructor ---it
-takes no argument (\texttt{'[]}) and produce type \texttt{[a]}.
+takes no argument (\texttt{'[]}) and yields a list of type
+\texttt{[a]}.
 %m
 Constructor \texttt{Cons} represents the cons constructor, which
 takes two arguments, the head of the list and the tail of the list
-\texttt{'[a , [a]]} and produces a list of type \texttt{[a]}.
+\texttt{'[a , [a]]} and yields a list of type \texttt{[a]}.
 %
 Observe that, \texttt{Nil} and \texttt{Cons} represent \emph{polymorphic}
 constructors.
@@ -1813,7 +1819,7 @@ constructors.
 
 %
 This representation encodes also primitive types, i.e.\ non algebraic
-data types, such as integer.
+data types, such as \texttt{Int}.
 %
 Since they may assume many values, they are all combined in a single
 constructor, whose index declares that it does not take any argument
@@ -1822,7 +1828,7 @@ constructor, whose index declares that it does not take any argument
 data IntC xs a where
   I :: Int → IntC '[] Int
 \end{minted}
-Thanks to polymorphism, these two encoding are sufficient for our to
+Thanks to polymorphism, these two encodings are sufficient for our to
 revisit our initial example: we represent a CSV table as lists of
 lists of integers.
 \begin{minted}{haskell}
@@ -1872,9 +1878,9 @@ functions that embed a value into and from the generic representation.
 % types have a \texttt{Diff} instance.
 %
 Method \texttt{(=?=)} tests equality between constructors of the same
-data type, and if so it returns a proof that their field types are
-equal. This operator is used both in the diff and merge algorithm both
-to merge edits.
+data type, and returns a proof that their field types are equal, if
+this is the case. This operator is used both in the diff and merge
+algorithm both to merge edits.
 %
 % The function \texttt{distance} computes the cost of an update between
 % constructors of the same type and it is expected to be a
@@ -1917,8 +1923,8 @@ derive a \texttt{Diff} instance for lists of them, so that
 \texttt{Diff [[Int]]} from the previous one.
 
 \begin{minted}{haskell}
-instance Diff a => Diff [a] where	
-  type Encoding [a] = ListF
+instance Diff a => Diff [a]x where	
+  type Encoding [a] = ListC
 
   Nil =?= Nil = Just Refl
   Cons =?= Cons = Just Refl
@@ -1938,7 +1944,7 @@ we have to compare the actual value, to establish
 that they represent the ``same'' constructor.
 \begin{minted}{haskell}
 instance Diff Int where
-  type Encoding Int = IntF
+  type Encoding Int = IntC
 
   (I x) =?= (I y) = if x == y then Just Refl else Nothing
   
@@ -1947,7 +1953,7 @@ instance Diff Int where
   fromHTree (Node (I x) HNil) = x
 \end{minted}
 %
-% Tables are just lists of list of integers, so that the same list
+% Tables are just lists of lists of integers, so that the same list
 % \texttt{Diff} instance is used twice, once to derive \texttt{Diff
 %   [Int]} from \texttt{Diff Int} and then to automatically derive
 % \texttt{Diff [[Int]]} from it.
@@ -1996,7 +2002,7 @@ gpatch :: ES xs ys → HList ys
 \end{minted}
 
 We remark that contrary to that of Lempsink's \cite{Lemp09} the
-function is total and furthermore does not need the source object to
+function is total and furthermore it does not need the source object to
 compute the target object, since the edit script alone contains all
 the information necessary to reconstruct it.
 
@@ -2069,7 +2075,7 @@ Main> gpatch e
 Research in the field of change detection and merge has produced a
 variety of tools that address these problems.  Many focus on XML
 files, such as LaDiff \cite{Chawathe96}, MH-Diff \cite{Chawathe97} and
-3DM \cite{Lind01, Lind04, Lind05}.  We refer to Peters for a
+3DM \cite{Lind04, Lind05}.  We refer to Peters for a
 comprehensive survey \cite{PetersSurvey}.
 %
 Other works address file and data synchronization, which raises
@@ -2079,7 +2085,7 @@ Harmony, a synchronizer for heterogeneous data
 \cite{HarmonyOverview,Pierce07} and an algebra for file
 synchronization \cite{Ramsey01}.
 %
-Lastly some mergers are tailored exclusively on software artifacts
+Lastly some mergers are tailored exclusively to software artifacts
 \cite{Westfechtel91, Mens02, Apel11}. 
 
 \paragraph{Diff}
@@ -2098,7 +2104,7 @@ We both employ similar trees and heterogeneous list, but our
 constructor representation handles also \emph{polymorphic}
 data types such as lists, while their approach requires 
 to encode families of mutually recursive data-types
-at once, furthermore only with fully instantiated types.
+at once, furthermore, only with fully instantiated types.
 Our representation is instead modular and reusable.
 
 \paragraph{Ordered and Unordered Data} 
@@ -2109,7 +2115,7 @@ XML trees can also be unordered.
 %
 Schemas are used in Harmony to identify specific
 conflicts (\emph{schema domain conflicts}), which would break their
-structural invariants \cite{Pierce07}.
+structural invariant \cite{Pierce07}.
 %
 They play a role similar to types in this work, which we use to
 type-check edit scripts.
@@ -2162,14 +2168,14 @@ Harmony employs a \emph{local} strategy, that associates subtrees by
 name, therefore it is able to merge correctly unordered collections
 such as records and sets.
 %
-Our algorithm struggle with unordered data structures, 
+Our algorithm struggles with unordered data structures, 
 because it treats them as structured.
 %
 On the other hand Harmony performs poorly with lists, because
-it \emph{align} them by absolute position.
+it \emph{aligns} them by absolute position.
 %
 For example merging \texttt{[1, 3]} with \texttt{[2]} and base 
-\texttt{[1, 2]} surprisingly it gives \texttt{[2, 3]}, instead of
+\texttt{[1, 2]} surprisingly gives \texttt{[2, 3]}, instead of
 \texttt{[3]} as we do.
 %
 Chawathe and Molina reduce the change detection problem to the problem
@@ -2187,8 +2193,9 @@ hence affecting the merging phase.
 GNU diff employs insert, delete and copy in scripts only and updates
 are imprecisely encoded as a delete followed by an insert.  Our
 algorithm detects updates explicitly reducing the number of false
-conflicts and raising more specific and informative true conflicts
-(\texttt{UpdUpd}, \texttt{UpdDel}, \texttt{DelUpd}).
+conflicts and raising more accurate and informative conflicts
+(\texttt{UpdUpd}, \texttt{UpdDel}, \texttt{DelUpd}), that would be
+missed otherwise.
 %
 Some synchronizers employ also a \emph{move} edit operation
 \cite{Lind04, Chawathe96, Chawathe97}.
@@ -2206,7 +2213,7 @@ complicate reasoning \cite{Ramsey01}.
 \paragraph{Formal Model}
 The semantics of merging algorithms employed in version control
 systems, with the notable exception of Darcs \cite{HomoPatchTheory,
-  CategoryPatchTheory} is not formalized, but it is usually understood
+  CategoryPatchTheory} is not formalized, but are usually understood
 empirically, leading to severe misconceptions \cite{PierceDiff3}.
 %
 For instance it is in general hard to predict the outcome of complex
@@ -2226,7 +2233,7 @@ In this paper we have presented several properties of our algorithms,
 inspired by the work from Pierce et al.\ in Harmony
 \cite{HarmonyOverview}.
 %
-Ramsey and Csirmaz proposes an algebraic approach to file
+Ramsey and Csirmaz propose an algebraic approach to file
 synchronization \cite{Ramsey01}. 
 %
 Differently from our work their synchronizer is
@@ -2290,8 +2297,8 @@ users to reason about complex merge operations.
 We have released an efficient version of our algorithm as an Haskell
 library.
 %
-Moved from our promising results, we plan to perform a rigorous evaluation
-of our algorithm on real world data as future work.
+We plan to perform a rigorous evaluation of our algorithm on real
+world data as future work.
 %
 
 
