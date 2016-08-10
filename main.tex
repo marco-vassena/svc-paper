@@ -91,7 +91,22 @@
 \usepackage{graphicx}
 \graphicspath{ {images/} }
 
+% % Balancing in the bibliography
+% \usepackage{lastpage}
+% \makeatletter
+%     \def\balanceissued{unbalanced}%flag to indicate if \balance has been used
+%     \let\oldbibitem\bibitem
+%     \def\bibitem{%
+%         \ifnum\thepage=\lastpage@lastpage%
+%             \expandafter\ifx\expandafter\relax\balanceissued\relax\else%
+%                 \balance%
+%                 \gdef\balanceissued{\relax}\fi%
+%             \else\fi%
+%         \oldbibitem}
+% \makeatother
+
 \usepackage{flushend}
+%\usepackage{balance}
 
 \begin{document}
 \toappear{}
