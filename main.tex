@@ -88,9 +88,9 @@
 \usepackage{tikz}
 \usepackage{tikz-qtree}
 
-\newcommand{\nil}{\texttt{[]}}
-\newcommand{\cons}{\texttt{(:)}}
-\newcommand{\num}[1]{\texttt{#1}}
+\newcommand{\nil}{\textcolor{blue}{\texttt{[]}}}
+\newcommand{\cons}{\texttt{(\textcolor{blue}{∷})}}
+\newcommand{\num}[1]{\textcolor{magenta}{\texttt{#1}}}
 
 \usepackage{graphicx}
 \graphicspath{ {images/} }
@@ -323,7 +323,7 @@ of the data stored in the files.
 As a result, the algorithm fails to merge the two tables and raises
 spurious conflicts.
 %
-In particular, \texttt{diff3} employs the \emph{three-way merge}
+In particular, \texttt{diff3} employs the \emph{three-way-merge}
 technique to compare and merge the corresponding lines of three files.
 %
 The following table shows the result of applying this technique to the
@@ -419,7 +419,7 @@ This paper is organized as follows.
 %
 Section \ref{section:universe} describes the universe used by our
 generic algorithms, Section \ref{sec:generic-diff} introduces the
-basic definitions of edits and type-safe edit scripts, Section
+basic definitions of edit and type-safe edit script, Section
 \ref{sec:generic-diff3} introduces the semantics of merge and conflict
 and gives a \texttt{diff3} algorithm based on it. Section
 \ref{sec:properties} studies the formal properties of the algorithm
@@ -444,7 +444,7 @@ of type \texttt{a}, that takes arguments of types given in list
 \texttt{as}.
 %
 For instance constructor \texttt{True} is represented by type \texttt{C []
-  Bool}, because it does not take any argument and produces a boolean
+  Bool}, because it takes no arguments and produces a boolean
 value.
 %
 Note that also polymorphic data types are supported by this
@@ -492,25 +492,24 @@ constructor to its arguments.
 List \texttt{[1,2]} is encoded in this universe as:
 \begin{Verbatim}[commandchars=\\\{\}]
 ht : HTree (List Int)
-ht = Node (\textcolor{blue}{::}) [Node \textcolor{magenta}{1} [], Node (\textcolor{blue}{::}) [Node \textcolor{magenta}{2} [], Node \textcolor{blue}{[]} []]]
+ht = Node \cons [Node \num{1} [], Node \cons [Node \num{2} [], Node \nil []]]
 \end{Verbatim}
-Terms \texttt{(\textcolor{blue}{::}) : C [Int, List Int] (List Int)}
-and \texttt{\textcolor{blue}{[]} : C [] (List Int)} denote the cons
+Terms\texttt{ }\cons \texttt{ : C [Int, List Int] (List Int)}
+and\texttt{ }\nil \texttt{ : C [] (List Int)} denote the cons
 constructor and the empty list constructor respectively, specialized
 without loss of generality to \texttt{List Int}.
 %
 In our examples we automatically lift numbers to node constructors,
-that is \texttt{\textcolor{magenta}{1}, \textcolor{magenta}{2} : C []
-  Int}.
+that is \num{1}, \num{2} \texttt{ : C [] Int}.
 %
 We graphically depict objects encoded in this universe as trees:
 
 \begin{figure}[h]
 \centering
 \Tree
-[.\texttt{(\textcolor{blue}{::})}
-   [.\texttt{\textcolor{magenta}{1}} ]
-   [.\texttt{(\textcolor{blue}{::})} [.\texttt{\textcolor{magenta}{2}} ] [.\texttt{\textcolor{blue}{[]}} ]]
+[.{\cons}
+   [.{\num{1}} ]
+   [.{\cons} [.{\num{2}} ] [.{\nil} ]]
 ]
 \end{figure}
 	
@@ -533,8 +532,8 @@ progressively transform one into the other.
 More precisely, an edit script is a list of edits, that either insert,
 delete, or replace nodes of the input objects.
 %
-We firstly describe a simply typed version of edit and edit scripts
-and then refine them to guarantee type-safety.
+We firstly describe a simply typed version of edit and edit script
+data types and then refine them to guarantee type-safety.
 
 \subsection{Edit Operations}
 An edit operation is a mapping \texttt{u ⟼ v}, where \texttt{u} and
@@ -559,11 +558,11 @@ data _⟼_ : Value as a → Value bs a → Set where
 The \texttt{Nop} edit is a no-operation, that will be
 used in Section \ref{subsec:alignment}, to \emph{align} edit scripts.
 %
-Edit \texttt{Del α} deletes node \texttt{α}, which is mapped to
-the empty value \texttt{∅}, since it lacks a target node.
+Edit \texttt{Del α} deletes node \texttt{α} ---since it lacks a target
+node, it is mapped to the empty value \texttt{∅},
 %
 Similarly, edit \texttt{Ins α} inserts node \texttt{α}, which
-then lacks a source node, hence it has the empty value \texttt{∅} 
+lacks a source node, hence it has the empty value \texttt{∅} 
 as source value.
 %
 Edit \texttt{Upd α β} updates source node \texttt{α} with target node
@@ -600,19 +599,19 @@ data ES : Set where
   _::_ : v ⟼ w → ES → ES
 \end{minted}	
 %
-More precisely the script traverses and processes their nodes
-by traversing the objects in depth-first preorder.
+More precisely, the script processes the nodes of the objects by
+traversing them in \emph{depth-first pre-order}.
 %
 Note however that we do not transform plain trees, but rather
 \emph{lists} of trees, which are used as \emph{stacks} of unprocessed
-nodes, pushed and popped according to the edit operations found in the
-script.
+nodes, pushed and popped according to the edit operations contained in
+the script.
 %
 We work with lists of trees because certain edits, when applied to
 nodes in a tree, will intrinsically result in multiple trees.
 %
 For instance, deleting the root node of tree \texttt{ht}, from Section
-\ref{section:universe}, will produce two trees (\texttt{Node
+\ref{section:universe}, produces two trees (\texttt{Node
   \textcolor{magenta}{1} []} and \texttt{Node (\textcolor{blue}{::})
   [Node \textcolor{magenta}{2} [], Node \textcolor{blue}{[]} []]}):
 
@@ -621,14 +620,14 @@ For instance, deleting the root node of tree \texttt{ht}, from Section
   \begin{minipage}{.15\textwidth}
   \centering
     \Tree
-    [.\texttt{\textcolor{magenta}{1}} ]
+    [.{\num{1}} ]
   \end{minipage}%
-%
+% 
 \begin{minipage}{.15\textwidth}
   \centering
     \Tree
-    [.\texttt{(\textcolor{blue}{::})} [.\texttt{\textcolor{magenta}{2}} ]     
-    [.\texttt{\textcolor{blue}{[]}} ]]
+    [.{\cons} [.{\num{2}} ]     
+    [.{\nil} ]]
 \end{minipage}%
 \end{figure}
 
@@ -637,28 +636,100 @@ Informally, a delete (insert) edit pops the root of the tree from the
 top of the \emph{source} (\emph{target}) stack and pushes its children
 instead.
 %
-An update behaves as a simultaneous delete and insert and
-a no-operation leaves both of the stacks unchanged.
+An update behaves as a simultaneous delete and insert and a
+no-operation leaves both stacks unchanged.
 %
-In principle, it should be possible to define functions that retrieves
+\paragraph{Example}
+The following script encodes the differences between two lists of
+integers, namely \texttt{[0]} and \texttt{[1,2]}:
+\begin{Verbatim}[commandchars=\\\{\}]
+e : ES
+e = [Upd \cons \cons, Upd \num{0} \num{1}, Ins \cons, Ins \num{2}, Upd \nil \nil]
+\end{Verbatim}
+The \emph{source} and \emph{target} stacks initially contain a single
+element each, i.e. the tree representation of \texttt{[0]} and
+\texttt{[1,2]} respectively.
+\begin{figure}[h!]
+\centering
+[
+  \begin{minipage}{.15\textwidth}
+  \centering
+    \Tree
+    [.{\cons} [.{\num{0}} ]     
+    [.{\nil} ]]
+  \end{minipage}%
+%
+] \hspace{.10\textwidth} [ 
+\begin{minipage}{.15\textwidth}
+  \centering
+\Tree
+[.{\cons}
+   [.{\num{1}} ]
+   [.{\cons} [.{\num{2}} ] [.{\nil} ]]
+]
+\end{minipage}%
+]
+\end{figure}
+
+The first edit (\texttt{Upd \cons\ \cons}) pops the root node of the
+top tree in each stack and pushes their children, producing the
+following stacks:
+\begin{figure}[h!]
+\centering
+[
+  \begin{minipage}{.075\textwidth}
+  \centering
+    \Tree
+    [.{\num{0}} ]
+  \end{minipage}%
+,
+  \begin{minipage}{.075\textwidth}
+    \centering
+    \Tree [.{\nil} ]
+  \end{minipage}%
+] \hspace{.075\textwidth} [ 
+  \begin{minipage}{.075\textwidth}
+  \centering
+    \Tree [.{\num{1}} ]
+  \end{minipage}%
+,
+  \begin{minipage}{.075\textwidth}
+  \centering
+     \Tree [.{\cons} [.{\num{2}} ] [.{\nil} ]]
+  \end{minipage}%
+]
+\end{figure}
+
+Observe that the next node to be consumed in each stack is the root
+node of the leftmost children ---nodes are processed in
+\emph{depth-first pre-order}.
+%
+The following edits progressively consume the remaining nodes, until
+the stacks are both empty.
+
+%
+In principle, it should be possible to define functions that retrieve
 the source and target objects from a script, by replaying the edit
 script and \emph{inverting} the process that we have just described.
 %
-Unfortunately, the lack of types already makes it hard to even assign a suitable
-type to such a function, i.e.  \texttt{⟪\_⟫ : ES → HList ?},
-what type should we put instead of the question mark?
+The type of these functions should take an edit script and produce an
+heterogeneous list, representing the stack of trees, that is \texttt{ES →
+  HList ?}.
+%
+Unfortunately, we run into problems: what type should we put instead of
+the question mark?
 %
 Crucially, an untyped edit script does not guarantee that its
 operations will produce well-typed trees and not even that they can be
 performed at all.
 %
-The top of the stack might contain trees of the wrong type, that do
-not match those of the constructor at hand, or it might try to pop
-trees from an empty stack.
+For instance, the top of the stack might contain trees of the wrong
+type, that do not match those of the constructor at hand, or an edit
+might try to pop trees from an empty stack.
 %
-For instance, edit script \texttt{[Ins (\textcolor{blue}{::}) , Ins
-  \textcolor{magenta}{0}]} would generate a target list containing an
-ill-typed tree, whose root node lacks a second child:
+Consider, for example, edit script \texttt{[Ins (\textcolor{blue}{::})
+  , Ins \textcolor{magenta}{0}]}, which generates a target list
+containing an ill-typed tree, whose root node lacks a second child:
 \begin{figure}[!h]
 \centering
 \Tree
@@ -668,8 +739,8 @@ ill-typed tree, whose root node lacks a second child:
 \end{figure}
 
 %
-Preventing undefined operations and maintaining such
-invariants is the bread and butter of dependently-typed
+Preventing invalid operations, such as a pop from an empty stack, and
+maintaining invariants is the bread and butter of dependently-typed
 programming, as we proceed to show in the next section.
 
 \subsection{Type-Safe Edit Script}
@@ -700,9 +771,9 @@ empty for the empty value.
 %
 
 \paragraph{Edit Script}
-The edit script data type is still a list of edits, but it is now
-indexed with two lists of types, which restrict the shape of the
-source and target stacks.
+The edit script data type is still a list of edits, but now it is
+indexed with two lists of types, used to restrict the shape of the
+source and target stacks that may be processed by each edit operation.
 %
 \begin{minted}{agda}
 data ES : List Set → List Set → Set where
@@ -715,8 +786,8 @@ list of type \texttt{HList xs} into a \emph{target} list of type
 \texttt{HList ys}.  
 %
 The cons constructor takes an edit, whose source (target) value
-consumes \texttt{as} (\texttt{cs}) and yields \texttt{bs}
-(\texttt{ds}).
+consumes trees of type \texttt{as} (\texttt{cs}) and yields trees of
+type \texttt{bs} (\texttt{ds}).
 %
 The rest of the script is indexed by lists that have prefix
 \texttt{as} and \texttt{cs}, hence ensuring that it will be possible
@@ -776,30 +847,27 @@ analogous and thus omitted:
 \begin{figure*}[!t]
 \centering
 \includegraphics[scale=.25]{embedding2}
-\caption{The embedding induced by \texttt{[Upd (::) (::), \textcolor{magenta}{Upd 0 1}, \textcolor{blue}{Ins (::)} , \textcolor{blue}{Ins 2}, Upd [] []]}}
+\caption{The embedding induced by \texttt{[Upd \cons \cons, Upd \num{0} \num{1}, Ins \cons, Ins \num{2}, Upd \nil \nil]}}
 \label{fig:embedding}
 \end{figure*}
 
-\paragraph{Example}
-Invalid scripts, such as \texttt{[Ins (\textcolor{blue}{::}) , Ins
-  \textcolor{magenta}{0}]}, are now ill-typed.
+\paragraph{Discussion}
+Invalid scripts, such as \texttt{[Ins \cons , Ins \num{0}]}, are now
+ill-typed.
 %
-In particular, edit \texttt{Ins (\textcolor{blue}{::})} cannot be
-prepended to script \texttt{[Ins \textcolor{magenta}{0}] : ES [] [Int]},
+In particular, edit \texttt{Ins \cons} cannot be
+prepended to script \texttt{[Ins \num{0}] : ES [] [Int]},
 because the target index has not the right shape, i.e. \texttt{[Int] ≠
   [Int, List Int] ++ ys}.
-
-
-  The following script
-encodes the differences between two lists of integers, namely
-\texttt{[0]} and \texttt{[1,2]}, as witnessed by its richer type:
+%
+Well-formed edit scripts, such as that of the previous example can
+still be constructed.
 \begin{Verbatim}[commandchars=\\\{\}]
 e : ES [List Int] [List Int]
-e = [Upd (::) (::), \textcolor{magenta}{Upd 0 1}, \textcolor{blue}{Ins (::)} , \textcolor{blue}{Ins 2}, Upd [] []]
+e = [Upd \cons \cons, Upd \num{0} \num{1}, Ins \cons, Ins \num{2}, Upd \nil \nil]
 \end{Verbatim}
-
-Figure \ref{fig:embedding} shows that the script embeds nodes of the
-source tree into those of the target object.
+Figure \ref{fig:embedding} shows that script \texttt{e} embeds nodes of 
+the source object \texttt{[0]} into those of the target object \texttt{[1,2]}.
 %
 Finding a ``good'' embedding is the goal of \texttt{diff}.
 
