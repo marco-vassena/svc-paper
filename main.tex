@@ -109,8 +109,8 @@
 %         \oldbibitem}
 % \makeatother
 
-%\usepackage{flushend}
-\usepackage{balance}
+\usepackage{flushend}
+%\usepackage{balance}
 
 \begin{document}
 \toappear{}
@@ -151,7 +151,7 @@
   Many version control systems, including Git and Mercurial, rely on
   \texttt{diff3} to merge different revisions of the same file.
   %
-  More precisely \texttt{diff3} automatically merges two text files,
+  More precisely, \texttt{diff3} automatically merges two text files
   given a common base version, comparing them line by line and raising
   conflicts when the changes made are irreconcilable.
   %
@@ -323,7 +323,7 @@ of the data stored in the files.
 As a result, the algorithm fails to merge the two tables and raises
 spurious conflicts.
 %
-In particular, \texttt{diff3} employs the \emph{three-way-merge}
+In particular, \texttt{diff3} employs the \emph{three-way merge}
 technique to compare and merge the corresponding lines of three files.
 %
 The following table shows the result of applying this technique to the
@@ -381,7 +381,7 @@ In this paper we make the following contributions:
       from the specific algorithm used.
       % algorithm in terms of the edit script data type.
       % that  In Section 
-      \ref{subsec:diff-algo}, we give the 
+%      \ref{subsec:diff-algo}, we give the 
 %In Section \ref{subsec:merge-semantics}, 
     \item We formalize the \emph{three-way-merge} strategy and give a
       precise semantics of \emph{mergeable} and \emph{conflicting}
@@ -390,16 +390,17 @@ In this paper we make the following contributions:
 %       algorithm in terms of our edit semantics.
 %In Section \ref{subsec:diff3-algo}, we
     \item We implement a data type generic, three-way \texttt{diff3}
-      algorithm, based on our merge and conflict semantics and we
-      study its formal properties.
+      algorithm, based on our merge and conflict semantics and study
+      its formal properties.
 % in Section \ref{sec:properties}.
 \end{itemize}
 We have implemented these algorithms using generic programming
-techniques in Agda \cite{Bove09}, a programming language with dependent
-types and a proof assistant. Dependent types are particularly
-convenient in this setting to idiomatically encode the pre-conditions
-and post-conditions of our algorithms and ultimately verify their
-properties.
+techniques in Agda, a programming language with dependent types and a
+proof assistant \cite{Bove09}.
+%
+Dependent types are particularly convenient in this setting to
+idiomatically encode the pre-conditions and post-conditions of our
+algorithms and ultimately verify their properties.
 %
 We have then put our model into practice by efficiently implementing
 our algorithms in Haskell \cite{Marlow_haskell2010}.
@@ -471,7 +472,7 @@ represents a value of an algebraic data type of type \texttt{a}.
     Node : C as a → HList as → HTree a
 \end{minted}
 %
-Data type \texttt{HList as} collects the children of node, i.e. the
+Data type \texttt{HList as} collects the children of a node, i.e. the
 arguments of constructor \texttt{C as a}, each encoded as a typed
 tree.
 %
@@ -493,7 +494,7 @@ List \texttt{[1,2]} is encoded in this universe as:
 ht : HTree (List Int)
 ht = Node (\textcolor{blue}{::}) [Node \textcolor{magenta}{1} [], Node (\textcolor{blue}{::}) [Node \textcolor{magenta}{2} [], Node \textcolor{blue}{[]} []]]
 \end{Verbatim}
-Where \texttt{(\textcolor{blue}{::}) : C [Int, List Int] (List Int)}
+Terms \texttt{(\textcolor{blue}{::}) : C [Int, List Int] (List Int)}
 and \texttt{\textcolor{blue}{[]} : C [] (List Int)} denote the cons
 constructor and the empty list constructor respectively, specialized
 without loss of generality to \texttt{List Int}.
@@ -569,7 +570,7 @@ Edit \texttt{Upd α β} updates source node \texttt{α} with target node
 \texttt{β}.
 %
 It concretely represents a constructor change, because \texttt{α} and
-\texttt{β} belong to the same type \texttt{a}, but take possibly
+\texttt{β} belong to the \emph{same} type \texttt{a}, but take possibly
 different arguments \texttt{as} and \texttt{bs}.
 %
 Note that there is no explicit copy edit: it is just a special case of
@@ -599,7 +600,7 @@ data ES : Set where
   _::_ : v ⟼ w → ES → ES
 \end{minted}	
 %
-More precisely the script traverse and process their nodes
+More precisely the script traverses and processes their nodes
 by traversing the objects in depth-first preorder.
 %
 Note however that we do not transform plain trees, but rather
@@ -644,7 +645,7 @@ the source and target objects from a script, by replaying the edit
 script and \emph{inverting} the process that we have just described.
 %
 Unfortunately, the lack of types already makes it hard to even assign a suitable
-type to such a function  \texttt{⟪\_⟫ : ES → HList ?},
+type to such a function, i.e.  \texttt{⟪\_⟫ : ES → HList ?},
 what type should we put instead of the question mark?
 %
 Crucially, an untyped edit script does not guarantee that its
@@ -667,9 +668,9 @@ ill-typed tree, whose root node lacks a second child:
 \end{figure}
 
 %
-Guaranteeing this kind of invariant is the bread and butter of
-dependently-typed programming, as we proceed to show in the next
-section.
+Preventing undefined operations and maintaining such
+invariants is the bread and butter of dependently-typed
+programming, as we proceed to show in the next section.
 
 \subsection{Type-Safe Edit Script}
 In order to make edit scripts type-safe, we refine the \texttt{Value}
@@ -681,12 +682,14 @@ the the annotations on scripts and values to ensure type-safety.
 
 \paragraph{Value}
 Given a source (target) value of type \texttt{Value as a}, an edit
-will pop trees of types \texttt{as} and push a tree of type \texttt{a}
-on the source (target) stack, if and only if a node is in fact
-present, otherwise the corresponding stack will be left unchanged.
+will pop trees of types \texttt{as} from the source (target) stack and
+push a tree of type \texttt{a} instead, if and only if a node is in
+fact present, otherwise the corresponding stack will be left
+unchanged.
 %
-The following indexed data type correctly approximate inputs and
-outputs, regardless of the presence of the node.
+Contrary to the previous version of \texttt{Value as a}, the following
+indexed data type correctly approximate inputs and outputs,
+\emph{regardless} of the presence of the node.
 \begin{minted}{agda}
 data Value : List Set → List Set → Set where
   ∅ : Value [] []
@@ -715,12 +718,30 @@ The cons constructor takes an edit, whose source (target) value
 consumes \texttt{as} (\texttt{cs}) and yields \texttt{bs}
 (\texttt{ds}).
 %
-The fact that the lists of the rest of the edit script have prefix
-\texttt{as} and \texttt{cs}, ensure that it will be possible to pop
-trees of the right type from the source and target object
+The rest of the script is indexed by lists that have prefix
+\texttt{as} and \texttt{cs}, hence ensuring that it will be possible
+to pop trees of the right type from its source and target object
 respectively, and replace them by constructing and pushing well-typed
 trees of types \texttt{bs} and \texttt{ds}.
+%
+Note that this invariant holds regardless of the specific edit at
+hand, precisely because we have refined the type of \texttt{Value}.
+%
+For example if edit \texttt{v ⟼ w} is a no-operation, nodes \texttt{v}
+and \texttt{w} are \texttt{∅}, hence lists \texttt{as}, \texttt{bs},
+\texttt{cs} and \texttt{ds} are all empty: nothing is popped and
+nothing is pushed (\texttt{[] ++ xs = xs} and \texttt{[] ++ ys = ys})
+on the source and target lists.
+%
+If the edit is a delete, i.e. \texttt{⟨ α ⟩ ⟼ ∅}, with \texttt{α : C
+  as a}, the target stack is left unchanged, while \texttt{as} are
+popped from the source stack (\texttt{as ++ xs}) and a new tree
+constructed with \texttt{α} is pushed (\texttt{[ a ] ++ xs}).
+%
+Insert and update work in a similar fashion, therefore we omit further
+details.
 
+%
 With more precise types, we can define \emph{source} function
 \texttt{⟪\_⟫}, which retrieves the source object from an edit script:
 
@@ -760,8 +781,18 @@ analogous and thus omitted:
 \end{figure*}
 
 \paragraph{Example}
-While the previous edit script is now ill-typed, the following script
-encodes the differences between two lists of integers, namely \texttt{[0]} and \texttt{[1,2]}, as witnessed by its richer type:
+Invalid scripts, such as \texttt{[Ins (\textcolor{blue}{::}) , Ins
+  \textcolor{magenta}{0}]}, are now ill-typed.
+%
+In particular, edit \texttt{Ins (\textcolor{blue}{::})} cannot be
+prepended to script \texttt{[Ins \textcolor{magenta}{0}] : ES [] [Int]},
+because the target index has not the right shape, i.e. \texttt{[Int] ≠
+  [Int, List Int] ++ ys}.
+
+
+  The following script
+encodes the differences between two lists of integers, namely
+\texttt{[0]} and \texttt{[1,2]}, as witnessed by its richer type:
 \begin{Verbatim}[commandchars=\\\{\}]
 e : ES [List Int] [List Int]
 e = [Upd (::) (::), \textcolor{magenta}{Upd 0 1}, \textcolor{blue}{Ins (::)} , \textcolor{blue}{Ins 2}, Upd [] []]
@@ -778,7 +809,7 @@ Our \texttt{diff3} algorithm does not merge objects directly, but like
 its text-based counterpart, relies on a \texttt{diff} algorithm
 as a subroutine to detect changes between them.
 %
-More precisely, a \texttt{diff} algorithm takes two object and produces
+More precisely, a \texttt{diff} algorithm takes two objects and produces
 an edit script that describes the differences between them, which is
 then used to compute the merged object by \texttt{diff3}.
 %
@@ -794,16 +825,16 @@ valid with any function of type \texttt{diff : HList as → HList bs →
       y ≡ ⟦ e ⟧}}
 \end{req}
 %
-This correctness criterion demands that the edit script computed by
-\texttt{diff} transform exactly the source object \texttt{x} into the
-target object \texttt{y}.  (In the specifications \texttt{≡} denotes
+This correctness criterion requires \texttt{diff} to produce a script
+that transforms exactly the source object \texttt{x} into the target
+object \texttt{y}.  (In the specifications \texttt{≡} denotes
 propositional equality.)
 %
 Note that the specification is very permissive: it does not require 
 the edit script to be minimal, not even ``small''.
 %
 Even though we expect our \texttt{diff3} algorithm to perform better
-with competitive \texttt{diff}s ---they will probably capture changes
+with high-quality \texttt{diff}s ---they will probably capture changes
 more precisely, the advantage of reasoning by such specification is
 that our results are still valid with virtually any \emph{sensible}
 \texttt{diff} algorithm.
@@ -850,9 +881,9 @@ It then generates an edit script by merging the edits contained in
 edit scripts: the \emph{source} of the merged script is the base
 object and the \emph{target} is the merged object.
 %
-Nevertheless, edits cannot always be automatically reconciled: a
-conflict is triggered in this situation and reported to the user, who
-has to solve it manually. 
+Nevertheless, edits cannot always be automatically reconciled.  When
+this happens, a conflict is detected and reported to the user, who has
+to manually merge the conflicting changes.
 %
 % \todo{More discussion about different design choices, persistent etc
 %   ...}		
@@ -860,7 +891,7 @@ has to solve it manually.
 %   want to apply it to structured data. Maybe in intro?}
 %
 The merging strategy employed in our \texttt{diff3} algorithm for
-algebraic data types consists in applying the three-way merge
+algebraic data types consists in applying the \emph{three-way merge}
 technique at the node level.
 %
 Informally, the algorithm compares corresponding parts of two objects
@@ -885,7 +916,7 @@ immensely the precision and reliability of \texttt{diff3}.
 In this framework, \emph{edits} are suitable candidates to identify
 these parts, because they relate source values that belong to the same
 object (\emph{base}), with target values that belong to different
-replicas, which we want to merge.
+replicas, which are to be merged.
 %
 More formally, we define \emph{alignment} as follows.
 \begin{definition}[Edit and Script Alignment]
@@ -949,11 +980,12 @@ Observe that, \texttt{Nop} edits changes neither the \emph{source} nor the
 extension.
 \begin{prop}[Equivalent Extension]
   If \texttt{e ⊑ e*}, then it holds that \texttt{⟦ e ⟧ ≡ ⟦ e* ⟧} and
-  \texttt{ ⟪ e ⟫ ≡ ⟪ e* ⟫}
+  \texttt{⟪ e ⟫ ≡ ⟪ e* ⟫}
 \end{prop}
 
 Proposition \ref{prop:align-ext} guarantees that we can always
-\texttt{Nop}-extend scripts that have the same source object.
+align scripts that have the same source object, by extending them
+with no-operations.
 %
 As a result, we can systematically apply this technique in
 \texttt{diff3}.
@@ -998,12 +1030,19 @@ Two aligned edits contain at most three distinct values: one common
 source and two, possibly different, targets, which are treated as
 corresponding parts.  
 %
-Three-way merge fails and triggers a conflict, if the three values are
-all different, because, in general, there is no reason to choose one
-over the other.
+If no more than two of them are different, it is possible to merge the
+edits, producing an edit that combines both.
 %
-If no more than two of them are different, it succeeds and provides an
-edit that combines both.
+However, if the values are all different, then there is no edit that
+comprises both edits: any edit would leave out at least one of them.
+%
+When this happens, three-way merge refuses to back out any edit, but
+fails and triggers a conflict instead.
+%
+This property is called \emph{persistence} and will be discussed in
+more detail in Section \ref{subsec:persistence}.
+%
+
 	
 \paragraph{Merge}
 Data type \texttt{f ⊔ g ↧ h} represents the semantics of merge:
@@ -1564,6 +1603,7 @@ by merging aligned edits from the input scripts.
 \end{prop}
 
 \subsection{Persistence}
+\label{subsec:persistence}
 Persistence is a property that establishes how conflicting edits,
 e.g.\ \texttt{∅ ⟼ ⟨ \textcolor{magenta}{1} ⟩} and \texttt{∅ ⟼ ⟨
   \textcolor{magenta}{2} ⟩}, should be handled during merging.
@@ -2517,7 +2557,7 @@ B.~O'Sullivan.
 
 \bibitem[Peters(2005)]{PetersSurvey}
 L.~Peters.
-\newblock Change detection in xml trees: A survey, June 2005.
+\newblock Change detection in {XML} trees: A survey, June 2005.
 
 \bibitem[Pierce and Vouillon(2004)]{UnisonSpec}
 B.~C. Pierce and J.~Vouillon.
@@ -2532,8 +2572,6 @@ B.~C. Pierce, A.~Schmitt, and M.~B. Greenwald.
   heterogeneous tree-structured data.
 \newblock Technical Report MS-CIS-03-42, University of Pennsylvania, 2003.
 \newblock Superseded by MS-CIS-05-02.
-
-\newpage
 
 \bibitem[Ramsey and Csirmaz(2001)]{Ramsey01}
 N.~Ramsey and E.~Csirmaz.
