@@ -272,18 +272,18 @@ The first user adds a column filled with zero and saves the new table in \texttt
   \centering
 \begin{Verbatim}[commandchars=\\\{\}]
   $ cat b.csv
-  \textcolor{blue}{0},1,2,3
-  \textcolor{blue}{0},4,5,6
-  \textcolor{blue}{0},7,8,9
+  \textcolor{cyan}{0},1,2,3
+  \textcolor{cyan}{0},4,5,6
+  \textcolor{cyan}{0},7,8,9
 \end{Verbatim}
 \end{minipage}%$
 \begin{minipage}{.15\textwidth}
   \centering
   \begin{tabular}{ | c | c | c | c | }
     \hline
-    \textcolor{blue}{0} & 1 & 2 & 3 \\ \hline
-    \textcolor{blue}{0} & 4 & 5 & 6 \\ \hline
-    \textcolor{blue}{0} & 7 & 8 & 9  \\ \hline
+    \textcolor{cyan}{0} & 1 & 2 & 3 \\ \hline
+    \textcolor{cyan}{0} & 4 & 5 & 6 \\ \hline
+    \textcolor{cyan}{0} & 7 & 8 & 9  \\ \hline
   \end{tabular}
 \end{minipage}%
 \end{figure} 
@@ -296,8 +296,8 @@ The second user changes some values in the third column and saves the new table 
   \begin{Verbatim}[commandchars=\\\{\}]
   $ cat c.csv
   1,2,3
-  4,5,\textcolor{magenta}{9}
-  7,8,\textcolor{magenta}{15}
+  4,5,\textcolor{orange}{9}
+  7,8,\textcolor{orange}{15}
   \end{Verbatim}
 \end{minipage}% $
 \begin{minipage}{.15\textwidth}
@@ -305,8 +305,8 @@ The second user changes some values in the third column and saves the new table 
   \begin{tabular}{ | c | c | c | }
     \hline
     1 & 2 & 3 \\ \hline
-    4 & 5 & \textcolor{magenta}{9} \\ \hline
-    7 & 8 & \textcolor{magenta}{15} \\ \hline
+    4 & 5 & \textcolor{orange}{9} \\ \hline
+    7 & 8 & \textcolor{orange}{15} \\ \hline
   \end{tabular}
 \end{minipage}%
 \end{figure}
@@ -334,9 +334,9 @@ previous tables:
 \begin{tabular}{| c | c | c | c |}
 \hline
 \texttt{b} & \texttt{a} & \texttt{c} & \texttt{diff3 b a c} \\ \hline
-\texttt{\textcolor{blue}{0},1,2,3} & \texttt{1,2,3} & \texttt{1,2,3} & \textcolor{dgreen}{\texttt{0,1,2,3}} \\ \hline
-\texttt{\textcolor{blue}{0},4,5,6} & \texttt{4,5,6} & \texttt{4,5,\textcolor{magenta}{9}} & \textcolor{red}{✗}  \\ \hline
-\texttt{\textcolor{blue}{0},7,8,9} & \texttt{7,8,9} & \texttt{7,8,\textcolor{magenta}{15}} & \textcolor{red}{✗} \\ \hline
+\texttt{\textcolor{cyan}{0},1,2,3} & \texttt{1,2,3} & \texttt{1,2,3} & \textcolor{dgreen}{\texttt{0,1,2,3}} \\ \hline
+\texttt{\textcolor{cyan}{0},4,5,6} & \texttt{4,5,6} & \texttt{4,5,\textcolor{orange}{9}} & \textcolor{red}{✗}  \\ \hline
+\texttt{\textcolor{cyan}{0},7,8,9} & \texttt{7,8,9} & \texttt{7,8,\textcolor{orange}{15}} & \textcolor{red}{✗} \\ \hline
 \end{tabular}
 \end{center}
 If there is at most one different version of the same line, as it
@@ -361,9 +361,9 @@ users expected:
 \begin{center}
 \begin{tabular}{| c | c | c | c |}
 \hline
-\textcolor{blue}{0} & 1 & 2 & 3 \\ \hline
-\textcolor{blue}{0} & 4 & 5 & \textcolor{magenta}{9} \\ \hline
-\textcolor{blue}{0} & 7 & 8 & \textcolor{magenta}{15} \\ \hline
+\textcolor{cyan}{0} & 1 & 2 & 3 \\ \hline
+\textcolor{cyan}{0} & 4 & 5 & \textcolor{orange}{9} \\ \hline
+\textcolor{cyan}{0} & 7 & 8 & \textcolor{orange}{15} \\ \hline
 \end{tabular}
 \end{center}
 
@@ -613,9 +613,8 @@ We work with lists of trees because certain edits, when applied to
 nodes in a tree, will intrinsically result in multiple trees.
 %
 For instance, deleting the root node of tree \texttt{ht}, from Section
-\ref{section:universe}, produces two trees (\texttt{Node
-  \textcolor{magenta}{1} []} and \texttt{Node (\textcolor{blue}{::})
-  [Node \textcolor{magenta}{2} [], Node \textcolor{blue}{[]} []]}):
+\ref{section:universe}, produces two trees (\texttt{Node \num{1}\ []}
+and \texttt{Node \cons\ [Node \num{2}\ [], Node \nil\ []]}):
 
 \begin{figure}[h!]
 \centering
@@ -706,7 +705,7 @@ Observe that the next node to be consumed in each stack is the root
 node of the leftmost children ---nodes are processed in
 \emph{depth-first pre-order}.
 %
-The following edits progressively consume the remaining nodes, until
+The rest of the edits progressively consume the remaining nodes, until
 the stacks are both empty.
 
 %
@@ -729,14 +728,14 @@ For instance, the top of the stack might contain trees of the wrong
 type, that do not match those of the constructor at hand, or an edit
 might try to pop trees from an empty stack.
 %
-Consider, for example, edit script \texttt{[Ins (\textcolor{blue}{::})
-  , Ins \textcolor{magenta}{0}]}, which generates a target list
+Consider, for example, edit script \texttt{[Ins \cons
+  , Ins \num{0}]}, which generates a target list
 containing an ill-typed tree, whose root node lacks a second child:
 \begin{figure}[!h]
 \centering
 \Tree
-[.\texttt{(\textcolor{blue}{::})}
-   [.\texttt{\textcolor{magenta}{0}} ]
+[.{\cons}
+   [.{\num{0}} ]
 ]
 \end{figure}
 
@@ -803,8 +802,8 @@ hand, precisely because we have refined the type of \texttt{Value}.
 For example if edit \texttt{v ⟼ w} is a no-operation, nodes \texttt{v}
 and \texttt{w} are \texttt{∅}, hence lists \texttt{as}, \texttt{bs},
 \texttt{cs} and \texttt{ds} are all empty: nothing is popped and
-nothing is pushed (\texttt{[] ++ xs = xs} and \texttt{[] ++ ys = ys})
-on the source and target lists.
+nothing is pushed on the source and target stacks (\texttt{[] ++ xs =
+  xs} and \texttt{[] ++ ys = ys}).
 %
 If the edit is a delete, i.e. \texttt{⟨ α ⟩ ⟼ ∅}, with \texttt{α : C
   as a}, the target stack is left unchanged, while \texttt{as} are
@@ -849,7 +848,7 @@ analogous and thus omitted:
 \begin{figure*}[!t]
 \centering
 \includegraphics[scale=.25]{embedding2}
-\caption{The embedding induced by \texttt{[Upd \cons \cons, Upd \num{0} \num{1}, Ins \cons, Ins \num{2}, Upd \nil \nil]}}
+\caption{The embedding induced by \texttt{[Upd \cons\ \cons, Upd \num{0}\ \num{1}, Ins \cons, Ins \num{2}, Upd \nil\ \nil]}}
 \label{fig:embedding}
 \end{figure*}
 
@@ -1673,8 +1672,8 @@ by merging aligned edits from the input scripts.
 \subsection{Persistence}
 \label{subsec:persistence}
 Persistence is a property that establishes how conflicting edits,
-e.g.\ \texttt{∅ ⟼ ⟨ \textcolor{magenta}{1} ⟩} and \texttt{∅ ⟼ ⟨
-  \textcolor{magenta}{2} ⟩}, should be handled during merging.
+e.g.\ \texttt{∅ ⟼ ⟨ \num{1} ⟩} and \texttt{∅ ⟼ ⟨
+  \num{2} ⟩}, should be handled during merging.
 %
 Persistence promises to \emph{never} back out user's changes, hence it
 gives up \emph{convergence}, i.e.\ the guarantee to produce a merged
