@@ -814,8 +814,8 @@ Insert and update work in a similar fashion, therefore we omit further
 details.
 
 %
-With more precise types, we can define \emph{source} function
-\texttt{⟪\_⟫}, which retrieves the source object from an edit script:
+With more precise types, we can define function \texttt{⟪\_⟫}, which
+retrieves the \emph{source} object from an edit script:
 
 \begin{minted}{agda}
 ⟪_⟫ : ES as bs → HList as
@@ -875,7 +875,7 @@ Finding a ``good'' embedding is the goal of \texttt{diff}.
 \subsection{Diff Algorithm}
 \label{subsec:diff-algo}
 Our \texttt{diff3} algorithm does not merge objects directly, but like
-its text-based counterpart, relies on a \texttt{diff} algorithm
+its line-based counterpart, relies on a \texttt{diff} algorithm
 as a subroutine to detect changes between them.
 %
 More precisely, a \texttt{diff} algorithm takes two objects and produces
@@ -1065,8 +1065,9 @@ Adding no-operations operations to align scripts is effective, because
 \texttt{Nop} always aligns with \texttt{Ins} --- they both have the
 empty value \texttt{∅} as source.
 %
-Furthermore, it is also innocuous, because no-operations cannot
-introduce new conflicts, since they are \emph{identity} edits.
+Furthermore, no-operation is an \emph{identity} edit, therefore, as we
+show in the next section, it cannot introduce new conflicts, hence it
+is an harmless extension.
 
 
 %         \paragraph{Weak Alignment}\todo{Drop weak alignment, give only Proposition}
@@ -1228,7 +1229,7 @@ Operator \texttt{⊔} is outlined in Table \ref{table:merge}, where we
 have omitted the obvious inequalities in conflicts.
 %
 Operator \texttt{⊔₃} merges \emph{aligned} edit scripts\footnote{We
-  extend edit script with a special constructor \_::ᶜ\_ for
+  extend edit scripts with a special constructor \texttt{c ::ᶜ e} for
   conflicts.}, by applying operator \texttt{⊔} pairwise, i.e.\
 \texttt{e₁ ⊔₃ e₂ = zipWith (⊔) e₁ e₂}.
  
@@ -1457,8 +1458,10 @@ The problem becomes evident in the type of the merge operator
 \texttt{⊔₃ : ES xs ys -> ES xs zs -> ES xs ?}, what type should we put
 instead of the question mark?
 %
-If \texttt{ys ≡ zs}, like inside \texttt{diff3}, the question is
-trivial, but otherwise there is no ``right'' type.
+If \texttt{ys ≡ zs}, like when \texttt{⊔₃} is firstly called in
+\texttt{diff3}, the question is trivial, but the issue repeats when
+recursively merging the scripts: there is no ``right'' type that fits
+the signature.
 %
 An arbitrary choice, that is either \texttt{ys} or \texttt{zs}, is
 unsatisfactory, because it makes the algorithm asymmetric: we would
@@ -1466,9 +1469,10 @@ expect \texttt{e₁ ⊔₃ e₂} to produce the same result as \texttt{e₂ ⊔�
   e₁}, but the two scripts have even different types!
 %
 An existential type, i.e. \texttt{∃ ws . ES xs ws} is too ``general''.
-In order to add an edit, say \texttt{Ins α}, with \texttt{α : C as a},
-list \texttt{ws} should have prefix \texttt{as}, i.e.\ \texttt{ws ≡ as
-  ++ ws'}, but \texttt{ws} is just \emph{some} list.
+In order to add a merged edit, e.g. \texttt{Ins α}, with \texttt{α : C
+  as a}, list \texttt{ws} should have prefix \texttt{as}, i.e.\
+\texttt{ws ≡ as ++ ws'}, but \texttt{ws} is existentially quantified:
+it is just \emph{some} list.
 %
 Unfortunately, we acknowledge that our \texttt{diff3} algorithm may
 fail in yet another way, besides proper conflicts, that is by
@@ -1526,8 +1530,9 @@ results in a conflict uniquely if there are two edits that are
 \emph{aligned} and \emph{conflicting}.
 %
 The conflict and merge semantics, described in Section
-\ref{subsec:merge-semantics} makes Theorem very intuitive and easy to
-prove, but this does not diminish its importance.
+\ref{subsec:merge-semantics} makes Theorem \ref{thm:conflict-conds}
+straightforward and intuitive, but this does not diminish its
+importance.
 %
 For instance, a direct consequence of Theorem \ref{thm:conflict-conds}
 is a sound \emph{locality} principle for \texttt{diff3}, which
@@ -1676,9 +1681,9 @@ e.g.\ \texttt{∅ ⟼ ⟨ \num{1} ⟩} and \texttt{∅ ⟼ ⟨
   \num{2} ⟩}, should be handled during merging.
 %
 Persistence promises to \emph{never} back out user's changes, hence it
-gives up \emph{convergence}, i.e.\ the guarantee to produce a merged
-object, and raises a conflict when it is not possible to soundly merge
-edits \cite{Pierce07}.
+gives up \emph{convergence}, i.e.\ the guarantee to always produce a
+merged object, and raises a conflict when it is not possible to
+soundly merge edits \cite{Pierce07}.
 %
 Inspired by GNU \texttt{diff3}, we have opted for \emph{persistence}
 over convergence: Theorem \ref{thm:persistence} proves that
@@ -1709,9 +1714,10 @@ Let \texttt{e₃ = e₁ ⊔₃ e₂}, \texttt{f : u ⟼ v}, such that \texttt{u 
   v} and \texttt{f ∈ e₁} (\texttt{f ∈ e₂}), then either \texttt{f ∈
   e₃} or there exists a conflict \texttt{c} such that \texttt{c ∈ e₃}.
 \end{thm}
-Note that edit \texttt{f} represents a change edit because \texttt{u ≢
-  v} ---it could have been an identity edit and overwritten by another
-change edit due to axiom \texttt{Id₁} (\texttt{Id₂}) otherwise.
+Note that edit \texttt{f} represents a proper \emph{change edit}
+because \texttt{u ≢ v} ---it could have been an identity edit and
+overwritten by another change edit due to axiom \texttt{Id₁}
+(\texttt{Id₂}) otherwise.
 %
 Persistence guarantees not to back out \texttt{f}, therefore either
 \texttt{f} is part of the merged edit (\texttt{f ∈ e₃}), or it
@@ -1868,10 +1874,11 @@ Then one of the following holds.
 \end{itemize}
 \end{thm}
 
-Note that, thanks to permissive Requirement \ref{req:diff-specs},
-this property holds also when merging, specifically by instantiating
-\texttt{x} with \emph{base}, \texttt{e} with the merged script
-obtained by \texttt{⊔₃} and \texttt{y} with the merged object.
+Note that, thanks to permissive Requirement \ref{req:diff-specs}, this
+property holds also when merging, specifically by instantiating
+\texttt{x} with the \emph{base} object, \texttt{e} with the merged
+script obtained from \texttt{⊔₃} and \texttt{y} with the merged
+object.
 
 % \begin{proof}
 %   By Proposition \ref{prop:order-preserving-embedding} there are edits
@@ -2087,7 +2094,7 @@ instance Diff a => Diff [a] where
     = fromHTree x : fromHTree ts
 \end{minted} 
 %
-Note that when comparing primitive type ``constructors'', we have to
+Note that when comparing ``constructors'' of primitive types, we have to
 compare the actual value, to establish whether they represent in fact
 the same one.
 \begin{minted}{haskell}
@@ -2351,17 +2358,18 @@ Move can improve the quality of diffs only if it is detected
 with a fair confidence, therefore Lindholm takes into
 account the \emph{context} of a node in order to improve the precision.
 %
-With respect to our work we remark that move edits would weaken 
-the structural invariants guarantees and would probably 
-complicate reasoning \cite{Ramsey01}.
+With respect to our work we remark that move edits would weaken the
+structural invariant guarantees and would probably complicate
+reasoning \cite{Ramsey01}.
 	
 \paragraph{Formal Model}
 The semantics of merging algorithms employed in version control
-systems, with the notable exception of Darcs \cite{HomoPatchTheory,
-  CategoryPatchTheory} is not formalized, but are usually understood
-empirically, leading to severe misconceptions \cite{PierceDiff3}.
+systems is not formalized, with the notable exception of Darcs
+\cite{HomoPatchTheory, CategoryPatchTheory}, but it is usually
+understood empirically, leading to severe misconceptions
+\cite{PierceDiff3}.
 %
-For instance it is in general hard to predict the outcome of complex
+For instance, it is in general hard to predict the outcome of complex
 merges and determine whether a conflict is indeed true or the
 consequence of a bug.
 %
@@ -2394,12 +2402,11 @@ and prove that it is sound and complete.
 % synchronization is possible if there is a sequence at least as good as
 %both.
 %
-However the system is quite large, for only five operations it
-consists of about fifty laws, to the point that it requires automatic
-techniques to prove it sound.
+However the system is so large that it requires automatic techniques
+to prove it sound: with only five operations, it counts more than
+fifty laws!
 %
-On the other hand our model is instead concise and straightforward
-to analyze.
+Our model is instead concise and straightforward to analyze.
 %
 % The 3DM tool devised by Lindholm does not include a mechanically
 % verified model and moreover the general merge rules have been derived
